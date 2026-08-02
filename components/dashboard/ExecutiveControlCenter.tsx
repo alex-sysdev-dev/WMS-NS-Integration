@@ -1,11 +1,24 @@
-import OperationsFlowPanel, { type OperationsFlowPoint } from '@/components/dashboard/OperationsFlowPanel'
+import DataSourceNotice from '@/components/common/DataSourceNotice'
 import KpiTile from '@/components/kpi/KpiTile'
-import { getExecutiveCptRiskOrders, getExecutiveKpiHistoryHourly, getExecutiveKpiSnapshot } from '@/lib/queries/executive'
-import type { ExecutiveCptRiskOrder, ExecutiveKpiHistoryRow, ExecutiveKpiSnapshot } from '@/types/executive'
+import DataTable, { type Column } from '@/components/tables/DataTable'
+import { getProjectsNeedingAttention, getWarehouseKpis } from '@/lib/queries/warehouse'
+import type { ProjectAttentionRow } from '@/types/warehouse'
+
+/**
+ * Timestamps and numbers are formatted with an explicit locale and time zone.
+ *
+ * Without them, `toLocaleString()` resolves against the *runtime's* locale and
+ * zone, which differs between the Node server and the browser — the server
+ * renders one string, the client renders another, and React reports a hydration
+ * mismatch. LED Connection operates in Las Vegas, so Pacific is also the
+ * correct zone to show a warehouse floor.
+ */
+const LOCALE = 'en-US'
+const TIME_ZONE = 'America/Los_Angeles'
 
 function formatTimestamp(value: string | null | undefined): string {
   if (!value) {
-    return 'No live snapshot yet'
+    return 'No sync yet'
   }
 
   const parsed = new Date(value)
@@ -13,269 +26,53 @@ function formatTimestamp(value: string | null | undefined): string {
     return value
   }
 
-  return parsed.toLocaleString('en-US', {
+  return parsed.toLocaleString(LOCALE, {
     month: 'short',
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: TIME_ZONE,
   })
 }
 
-function formatNumber(value: number | null | undefined): string {
-  return value === null || value === undefined ? 'Pending' : value.toLocaleString()
-}
-
-function formatPercent(value: number | null | undefined): string {
-  return value === null || value === undefined ? 'Pending' : `${value.toFixed(1)}%`
-}
-
-function formatCurrency(value: number | null | undefined): string {
-  if (value === null || value === undefined) {
-    return 'Pending'
-  }
-
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value)
-}
-
-function formatHours(value: number | null | undefined): string {
-  return value === null || value === undefined ? 'Pending' : `${value.toFixed(1)}h`
-}
-
-function formatMinutesToCpt(value: number | null | undefined): string {
-  if (value === null || value === undefined) {
-    return 'Unknown'
-  }
-
-  if (value < 0) {
-    return `Overdue ${Math.abs(value)}m`
-  }
-
-  return `${value}m left`
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
-}
-
-function normalizeMetric(values: Array<number | null | undefined>, fallback: number): number[] {
-  const clean = values.map((value) => (value === null || value === undefined || Number.isNaN(value) ? fallback : value))
-
-  if (clean.length === 0) {
-    return []
-  }
-
-  const min = Math.min(...clean)
-  const max = Math.max(...clean)
-
-  if (Math.abs(max - min) < 0.001) {
-    const midpoint = clamp(42 + clean[clean.length - 1] * 0.08, 34, 72)
-    return clean.map(() => midpoint)
-  }
-
-  return clean.map((value) => clamp(14 + ((value - min) / (max - min)) * 78, 8, 96))
-}
-
-function metricRange(values: number[]): number {
-  if (values.length === 0) {
-    return 0
-  }
-
-  return Math.max(...values) - Math.min(...values)
-}
-
-function buildFlowBase(snapshot: ExecutiveKpiSnapshot | null): OperationsFlowPoint {
-  const throughput = snapshot?.throughput_per_hour ?? 22
-  const productivity = snapshot?.productivity_per_labor_hour ?? 0.92
-  const activeOrders = snapshot?.active_orders ?? 118
-  const cptRisk = snapshot?.cpt_risk_orders ?? 6
-  const yard = snapshot?.yard_occupancy_pct ?? 78
-  const dock = snapshot?.dock_utilization_pct ?? 64
-
-  return {
-    backlog: clamp(26 + activeOrders * 0.15, 22, 84),
-    cpt: clamp(18 + cptRisk * 8, 12, 88),
-    flow: clamp(28 + throughput * 1.6 + productivity * 12, 24, 92),
-    capacity: clamp((yard + dock) / 2, 18, 92),
-  }
-}
-
-function buildSimulatedFlowSeed(base: OperationsFlowPoint, length = 24): OperationsFlowPoint[] {
-  return Array.from({ length }, (_, index) => ({
-    backlog: clamp(base.backlog + Math.sin(index / 2.2) * 9 + Math.cos(index / 5.1) * 4, 10, 96),
-    cpt: clamp(base.cpt + Math.sin((index + 2) / 3) * 7 + Math.cos(index / 4.7) * 3, 8, 94),
-    flow: clamp(base.flow + Math.sin((index + 1) / 2.7) * 8 - Math.cos(index / 4.2) * 4, 12, 96),
-    capacity: clamp(base.capacity + Math.sin((index + 3) / 3.3) * 6 + Math.cos(index / 6.1) * 5, 10, 94),
-  }))
-}
-
-function buildOperationsFlow(
-  snapshot: ExecutiveKpiSnapshot | null,
-  hourlyHistory: ExecutiveKpiHistoryRow[]
-): { seed: OperationsFlowPoint[]; modeLabel: string; modeSummary: string } {
-  const base = buildFlowBase(snapshot)
-
-  if (hourlyHistory.length === 0) {
-    return {
-      seed: buildSimulatedFlowSeed(base),
-      modeLabel: 'Live',
-      modeSummary: 'Running from current KPI snapshot.',
-    }
-  }
-
-  const backlog = normalizeMetric(
-    hourlyHistory.map((row) => row.active_orders_max ?? row.pending_pick_orders_max ?? row.active_orders_avg),
-    snapshot?.active_orders ?? 118
-  )
-  const cpt = normalizeMetric(
-    hourlyHistory.map((row) => row.cpt_risk_orders_max ?? row.cpt_risk_orders_avg),
-    snapshot?.cpt_risk_orders ?? 6
-  )
-  const flow = normalizeMetric(
-    hourlyHistory.map((row) => {
-      const throughput = row.throughput_per_hour_avg ?? snapshot?.throughput_per_hour ?? 22
-      const productivity = row.productivity_per_labor_hour_avg ?? snapshot?.productivity_per_labor_hour ?? 0.92
-      return throughput * 3 + productivity * 28
-    }),
-    (snapshot?.throughput_per_hour ?? 22) * 3 + (snapshot?.productivity_per_labor_hour ?? 0.92) * 28
-  )
-  const capacity = normalizeMetric(
-    hourlyHistory.map((row) => {
-      const yard = row.yard_occupancy_pct_avg ?? snapshot?.yard_occupancy_pct ?? 78
-      const dock = row.dock_utilization_pct_avg ?? snapshot?.dock_utilization_pct ?? 64
-      return (yard + dock) / 2
-    }),
-    ((snapshot?.yard_occupancy_pct ?? 78) + (snapshot?.dock_utilization_pct ?? 64)) / 2
-  )
-
-  const seed = backlog.map((backlogValue, index) => ({
-    backlog: backlogValue,
-    cpt: cpt[index] ?? cpt[cpt.length - 1] ?? base.cpt,
-    flow: flow[index] ?? flow[flow.length - 1] ?? base.flow,
-    capacity: capacity[index] ?? capacity[capacity.length - 1] ?? base.capacity,
-  }))
-
-  const flattened =
-    metricRange(backlog) < 10 &&
-    metricRange(cpt) < 10 &&
-    metricRange(flow) < 10 &&
-    metricRange(capacity) < 10
-
-  if (flattened) {
-    return {
-      seed: buildSimulatedFlowSeed(seed[seed.length - 1] ?? base),
-      modeLabel: 'Live',
-      modeSummary: 'Ops Control',
-    }
-  }
-
-  return {
-    seed,
-    modeLabel: 'Live',
-    modeSummary:
-      'History-based operational readout',
-  }
-}
-
-function riskTone(bucket: string | null | undefined, isDeadlined: boolean | null | undefined): string {
-  if (isDeadlined || bucket === 'missed') {
-    return 'border-rose-400/40 bg-rose-500/15 text-rose-100'
-  }
-  if (bucket === 'risk') {
-    return 'border-amber-400/40 bg-amber-500/15 text-amber-100'
-  }
-  if (bucket === 'watch') {
-    return 'border-orange-400/40 bg-orange-500/15 text-orange-100'
-  }
-
-  return 'border-zinc-500/50 bg-zinc-700/30 text-zinc-100'
-}
-
-function lifecycleLabel(value: string | null | undefined): string {
-  if (!value) {
-    return 'Open'
-  }
-
-  return value
-    .split('_')
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ')
-}
-
-function buildWatchlistHeading(riskOrders: ExecutiveCptRiskOrder[]): string {
-  const deadlined = riskOrders.filter((order) => order.is_deadlined).length
-  if (deadlined > 0) {
-    return `${deadlined} deadlined orders need immediate review.`
-  }
-  if (riskOrders.length > 0) {
-    return `${riskOrders.length} CPT exceptions are currently in watch or risk state.`
-  }
-
-  return 'No current CPT watchlist rows returned from Supabase.'
+/** Null means "not measured", which must not be rendered as a zero. */
+function formatCount(value: number | null | undefined): string {
+  return value === null || value === undefined ? 'Pending' : value.toLocaleString(LOCALE)
 }
 
 export default async function ExecutiveControlCenter() {
-  const [snapshot, hourlyHistory, riskOrders] = await Promise.all([
-    getExecutiveKpiSnapshot(),
-    getExecutiveKpiHistoryHourly(24),
-    getExecutiveCptRiskOrders(8),
-  ])
+  const [kpis, attention] = await Promise.all([getWarehouseKpis(), getProjectsNeedingAttention()])
 
-  const tiles = [
-    { title: 'Throughput', value: formatNumber(snapshot?.throughput_per_hour), accent: 'text-cyan-100 group-hover:text-cyan-50' },
-    { title: 'Labor Cost', value: formatCurrency(snapshot?.labor_cost_per_unit), accent: 'text-amber-100 group-hover:text-amber-50' },
-    { title: 'On-Time Ship', value: formatPercent(snapshot?.on_time_ship_pct), accent: 'text-emerald-100 group-hover:text-emerald-50' },
-    { title: 'CPT Risk', value: formatNumber(snapshot?.cpt_risk_orders), accent: 'text-rose-100 group-hover:text-rose-50' },
-    { title: 'Active Orders', value: formatNumber(snapshot?.active_orders) },
-    { title: 'Pending Pick', value: formatNumber(snapshot?.pending_pick_orders), accent: 'text-orange-100 group-hover:text-orange-50' },
-    { title: 'Pending Pack', value: formatNumber(snapshot?.pending_pack_orders), accent: 'text-violet-100 group-hover:text-violet-50' },
-    { title: 'Order Age', value: formatHours(snapshot?.avg_order_age_hours), accent: 'text-zinc-100 group-hover:text-zinc-50' },
-    { title: 'Yard Occupancy', value: formatPercent(snapshot?.yard_occupancy_pct), accent: 'text-sky-100 group-hover:text-sky-50' },
-    { title: 'Dock Util', value: formatPercent(snapshot?.dock_utilization_pct), accent: 'text-orange-100 group-hover:text-orange-50' },
-    { title: 'Trailer Dwell', value: formatHours(snapshot?.avg_trailer_dwell_hours), accent: 'text-orange-100 group-hover:text-orange-50' },
-    { title: 'Deadlined', value: formatNumber(snapshot?.deadlined_orders), accent: 'text-rose-100 group-hover:text-rose-50' },
-    { title: 'Active Labor', value: formatNumber(snapshot?.active_labor), accent: 'text-cyan-100 group-hover:text-cyan-50' },
-    { title: 'Productivity', value: formatNumber(snapshot?.productivity_per_labor_hour), accent: 'text-emerald-100 group-hover:text-emerald-50' },
-    { title: 'Quality', value: formatPercent(snapshot?.quality_score_pct), accent: 'text-emerald-100 group-hover:text-emerald-50' },
-    { title: 'Safety', value: formatNumber(snapshot?.safety_incidents_30d), accent: 'text-amber-100 group-hover:text-amber-50' },
+  const connected = kpis.snapshotAt !== null
+
+  const pipelineTiles = [
+    { title: 'Material Received', value: formatCount(kpis.projectsMaterialReceived) },
+    { title: 'In Fabrication', value: formatCount(kpis.projectsInFabrication), accent: 'text-orange-100 group-hover:text-orange-50' },
+    { title: 'Ready to Ship', value: formatCount(kpis.projectsReadyToShip), accent: 'text-emerald-100 group-hover:text-emerald-50' },
+    { title: 'Partially Shipped', value: formatCount(kpis.projectsPartiallyShipped), accent: 'text-amber-100 group-hover:text-amber-50' },
   ]
 
-  const OperationsFlow = buildOperationsFlow(snapshot, hourlyHistory)
-  const briefCards = [
-    {
-      label: 'Order Backlog',
-      value: formatNumber(snapshot?.active_orders),
-      detail: `${formatNumber(snapshot?.pending_pick_orders)} pick | ${formatNumber(snapshot?.pending_pack_orders)} pack`,
-      tone: 'border-orange-400/40 bg-orange-500/10',
-    },
-    {
-      label: 'CPT Risk',
-      value: formatNumber(snapshot?.cpt_risk_orders),
-      detail: `${formatNumber(snapshot?.deadlined_orders)} deadlined`,
-      tone: 'border-rose-400/40 bg-rose-500/10',
-    },
-    {
-      label: 'Service Level',
-      value: formatPercent(snapshot?.on_time_ship_pct),
-      detail: `${formatPercent(snapshot?.quality_score_pct)} quality`,
-      tone: 'border-emerald-400/40 bg-emerald-500/10',
-    },
-    {
-      label: 'Capacity',
-      value: formatPercent(snapshot?.yard_occupancy_pct),
-      detail: `${formatPercent(snapshot?.dock_utilization_pct)} dock utilization`,
-      tone: 'border-amber-400/40 bg-amber-500/10',
-    },
+  const flowTiles = [
+    { title: 'Open Purchase Orders', value: formatCount(kpis.openPurchaseOrders) },
+    { title: 'Projects Short Material', value: formatCount(kpis.projectsShortMaterial), accent: 'text-rose-100 group-hover:text-rose-50' },
+    { title: 'Shipped This Week', value: formatCount(kpis.shipmentsThisWeek), accent: 'text-emerald-100 group-hover:text-emerald-50' },
+    { title: 'Shipped This Month', value: formatCount(kpis.shipmentsThisMonth), accent: 'text-emerald-100 group-hover:text-emerald-50' },
   ]
-  const exceptionRows = [
-    { label: 'Deadlined orders', value: formatNumber(snapshot?.deadlined_orders), owner: 'Outbound lead' },
-    { label: 'CPT watch rows', value: riskOrders.length.toLocaleString(), owner: 'Wave desk' },
-    { label: 'Safety incidents 30d', value: formatNumber(snapshot?.safety_incidents_30d), owner: 'Safety' },
-    { label: 'Trailer dwell', value: formatHours(snapshot?.avg_trailer_dwell_hours), owner: 'Yard lead' },
+
+  const qualityTiles = [
+    { title: 'Open Fab Requests', value: formatCount(kpis.openFabRequests), accent: 'text-orange-100 group-hover:text-orange-50' },
+    { title: 'Fab QC Holds', value: formatCount(kpis.fabQcHolds), accent: 'text-rose-100 group-hover:text-rose-50' },
+    { title: 'Bins Never Counted', value: formatCount(kpis.binsNeverCounted), accent: 'text-amber-100 group-hover:text-amber-50' },
+    { title: 'Open Variances', value: formatCount(kpis.openInventoryVariances), accent: 'text-rose-100 group-hover:text-rose-50' },
+  ]
+
+  const attentionColumns: Column<ProjectAttentionRow>[] = [
+    { header: 'Project', accessor: 'projectNumber' },
+    { header: 'Name', accessor: 'projectName' },
+    { header: 'Customer', accessor: 'customer' },
+    { header: 'Stage', accessor: 'stage' },
+    { header: 'Needs Attention', accessor: 'reason' },
+    { header: 'Install Date', accessor: 'installDate' },
   ]
 
   return (
@@ -284,115 +81,72 @@ export default async function ExecutiveControlCenter() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">
             <span className="text-orange-500">LED Connection</span>{' '}
-            <span className="text-[var(--foreground)]">Site Performance</span>
+            <span className="text-[var(--foreground)]">Warehouse Overview</span>
           </h1>
+          <p className="mt-2 text-zinc-400">
+            Project pipeline, material flow, and fabrication status for Headquarters.
+          </p>
         </div>
 
         <div className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.92),rgba(15,23,42,0.84))] px-5 py-4 text-sm text-zinc-300">
-          <div className="text-zinc-400">Latest snapshot</div>
-          <div className="mt-1 font-semibold text-zinc-100">{formatTimestamp(snapshot?.snapshot_at)}</div>
+          <div className="text-zinc-400">Last NetSuite sync</div>
+          <div className="mt-1 font-semibold text-zinc-100">{formatTimestamp(kpis.snapshotAt)}</div>
         </div>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        {tiles.map((tile) => (
-          <KpiTile key={tile.title} title={tile.title} value={tile.value} accent={tile.accent} />
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 xl:grid-cols-[1.8fr_1fr] gap-6">
-        <OperationsFlowPanel
-          title="Operational Flow"
-          description=""
-          seed={OperationsFlow.seed}
-          modeLabel={OperationsFlow.modeLabel}
-          modeSummary={OperationsFlow.modeSummary}
+      {!connected && (
+        <DataSourceNotice
+          source="NetSuite job stages, purchase orders, and item fulfillments"
+          detail="Pipeline and shipping counts stay blank until the NetSuite sync is built. Fabrication and variance counts have no NetSuite source at all and will come from this system's own records."
         />
+      )}
 
-        <section className="ops-card rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
-          <h2 className="text-xl font-semibold text-zinc-100">Operational Brief</h2>
+      <section className="space-y-4">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+          Project pipeline
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          {pipelineTiles.map((tile) => (
+            <KpiTile key={tile.title} title={tile.title} value={tile.value} accent={tile.accent} />
+          ))}
+        </div>
+      </section>
 
+      <section className="space-y-4">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+          Material &amp; shipping
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          {flowTiles.map((tile) => (
+            <KpiTile key={tile.title} title={tile.title} value={tile.value} accent={tile.accent} />
+          ))}
+        </div>
+      </section>
 
-          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {briefCards.map((card) => (
-              <div key={card.label} className={`ops-card rounded-xl border p-4 ${card.tone}`}>
-                <div className="text-xs font-medium uppercase tracking-[0.18em] text-zinc-400">{card.label}</div>
-                <div className="mt-2 text-2xl font-semibold text-zinc-100">{card.value}</div>
-                <div className="mt-1 text-xs text-zinc-400">{card.detail}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 overflow-hidden rounded-xl border border-zinc-700/60">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="border-b border-white/10 bg-zinc-950/40 text-left text-zinc-300">
-                  <th className="px-3 py-2 font-semibold">Exception</th>
-                  <th className="px-3 py-2 font-semibold">Count</th>
-                  <th className="px-3 py-2 font-semibold">Owner</th>
-                </tr>
-              </thead>
-              <tbody>
-                {exceptionRows.map((row) => (
-                  <tr key={row.label} className="border-b border-white/5 text-zinc-200 last:border-0">
-                    <td className="px-3 py-2">{row.label}</td>
-                    <td className="px-3 py-2 font-semibold text-zinc-100">{row.value}</td>
-                    <td className="px-3 py-2 text-zinc-400">{row.owner}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      </div>
+      <section className="space-y-4">
+        <h2 className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
+          Fabrication &amp; inventory quality
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+          {qualityTiles.map((tile) => (
+            <KpiTile key={tile.title} title={tile.title} value={tile.value} accent={tile.accent} />
+          ))}
+        </div>
+      </section>
 
       <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
-        <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-zinc-100">CPT Risk Watchlist</h2>
-            <p className="mt-1 text-sm text-zinc-400">{buildWatchlistHeading(riskOrders)}</p>
-          </div>
-        </div>
+        <h2 className="text-xl font-semibold text-zinc-100">Projects needing attention</h2>
+        <p className="mt-1 text-sm text-zinc-400">
+          Projects blocked on missing material, fabrication, or a quality hold.
+        </p>
 
-        {riskOrders.length === 0 ? (
-          <div className="mt-6 rounded-xl border border-dashed border-zinc-700/60 bg-zinc-900/30 p-6 text-sm text-zinc-400">
-            No current watchlist data was returned. Verify `order_cpt_risk` has rows in `watch`, `risk`, or `missed`.
-          </div>
-        ) : (
-          <div className="mt-5 overflow-x-auto">
-            <table className="min-w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-white/10 text-left text-zinc-300">
-                  <th className="px-4 py-3 font-semibold">Order</th>
-                  <th className="px-4 py-3 font-semibold">Window</th>
-                  <th className="px-4 py-3 font-semibold">Stage</th>
-                  <th className="px-4 py-3 font-semibold">Risk</th>
-                  <th className="px-4 py-3 font-semibold">CPT</th>
-                  <th className="px-4 py-3 font-semibold">Time to CPT</th>
-                </tr>
-              </thead>
-              <tbody>
-                {riskOrders.map((order) => (
-                  <tr key={order.order_id} className="border-b border-white/5 text-zinc-200 hover:bg-white/5">
-                    <td className="px-4 py-3">
-                      <div className="font-medium text-zinc-100">{order.order_number ?? order.order_id}</div>
-                      <div className="text-xs text-zinc-400">{order.status ?? 'Unknown status'}</div>
-                    </td>
-                    <td className="px-4 py-3">{order.cpt_window_label ?? 'Unmapped'}</td>
-                    <td className="px-4 py-3">{lifecycleLabel(order.lifecycle_stage)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-medium ${riskTone(order.risk_bucket, order.is_deadlined)}`}>
-                        {order.is_deadlined ? 'Deadlined' : lifecycleLabel(order.risk_bucket)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">{formatTimestamp(order.cpt_at)}</td>
-                    <td className="px-4 py-3">{formatMinutesToCpt(order.minutes_to_cpt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="mt-5 overflow-x-auto">
+          <DataTable<ProjectAttentionRow>
+            columns={attentionColumns}
+            data={attention}
+            emptyMessage="No projects flagged. Connect NetSuite to populate this list."
+          />
+        </div>
       </section>
     </div>
   )

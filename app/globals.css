@@ -1,28 +1,51 @@
 @import "tailwindcss";
 
+/*
+ * The app is hardcoded to dark (`<html class="dark">`), so the palette is
+ * defined once rather than behind a prefers-color-scheme query. Previously the
+ * default :root was light while every component assumed a dark ground, which
+ * meant a light-mode OS briefly rendered dark text on a dark card.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #09090b;
+  --foreground: #ededed;
+
+  /* LED Connection brand orange. */
+  --brand: #f07e1e;
+  --brand-strong: #d2650f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-sans: var(--font-sans-family);
+  --font-mono: var(--font-mono-family);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans-family), system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* Manrope carries a little more width than Geist; pulling tracking in slightly
+     keeps dense dashboard text compact. */
+  letter-spacing: -0.011em;
+}
+
+/* Headings get tighter optical tracking the larger they are. */
+h1,
+h2,
+h3 {
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+}
+
+/* Figures line up in columns wherever they are compared — KPI values, tables,
+   and any tabular readout. */
+.tabular,
+table,
+td,
+th {
+  font-variant-numeric: tabular-nums;
 }
 
 .ops-card {
@@ -35,6 +58,14 @@ body {
 
 .ops-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(96,165,250,0.7);
-  box-shadow: 0 28px 60px -30px rgba(37,99,235,0.62);
+  border-color: rgba(240, 126, 30, 0.7);
+  box-shadow: 0 28px 60px -30px rgba(210, 101, 15, 0.55);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-card,
+  .ops-card:hover {
+    transition: none;
+    transform: none;
+  }
 }

@@ -108,7 +108,7 @@ export default async function InboundPage() {
           labels={supplierVolume.labels}
           series={[
             { name: 'Expected', color: '#F07E1E', values: supplierVolume.expected },
-            { name: 'Received', color: '#2DD4BF', values: supplierVolume.received },
+            { name: 'Received', color: '#A78BFA', values: supplierVolume.received },
           ]}
         />
       </div>

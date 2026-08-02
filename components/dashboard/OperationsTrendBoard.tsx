@@ -34,9 +34,13 @@ function buildSeed(level: number, seedIndex: number, points = 16): number[] {
 }
 
 function formatTimelineLabel(timestamp: number): string {
+  // Pin the zone. Without it this resolves against the runtime's zone, which
+  // differs between the Node server and the browser and shows up as a
+  // hydration mismatch. LED Connection operates in Pacific time.
   return new Date(timestamp).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: 'America/Los_Angeles',
   })
 }
 
