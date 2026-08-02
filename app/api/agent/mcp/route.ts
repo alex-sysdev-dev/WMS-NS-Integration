@@ -1,0 +1,164 @@
+import { NextRequest, NextResponse } from "next/server";
+
+function getBaseUrl(req: NextRequest) {
+  const url = new URL(req.url);
+  return `${url.protocol}//${url.host}`;
+}
+
+const tools = [
+  {
+    name: "get_kpi_snapshot",
+    description: "Get current executive KPI snapshot for LED Connection.",
+    inputSchema: { type: "object", properties: {}, required: [] },
+  },
+  {
+    name: "get_kpi_trend",
+    description: "Get one KPI metric trend over time.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        metric: { type: "string" },
+        grain: { type: "string", enum: ["hourly", "daily"] },
+        start: { type: "string" },
+        end: { type: "string" },
+      },
+      required: ["metric", "grain"],
+    },
+  },
+  {
+    name: "get_max_lines",
+    description: "Get max-line chart data for active orders, CPT risk, and safety.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        grain: { type: "string", enum: ["hourly", "daily"] },
+        start: { type: "string" },
+        end: { type: "string" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_cpt_risk",
+    description: "Get current CPT risk orders.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        bucket: { type: "string" },
+        limit: { type: "integer" },
+      },
+      required: [],
+    },
+  },
+  {
+    name: "get_order_status",
+    description: "Get status for one order by ID or order number.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        order_number: { type: "string" },
+        id: { type: "string" },
+      },
+      required: [],
+    },
+  },
+];
+
+async function callTool(baseUrl: string, name: string, args: Record<string, unknown>) {
+  const params = new URLSearchParams();
+  Object.entries(args).forEach(([k, v]) => {
+    if (v != null) params.set(k, String(v));
+  });
+
+  const endpoints: Record<string, string> = {
+    get_kpi_snapshot: "/api/agent/kpi-snapshot",
+    get_kpi_trend: "/api/agent/kpi-trend",
+    get_max_lines: "/api/agent/max-lines",
+    get_cpt_risk: "/api/agent/cpt-risk",
+    get_order_status: "/api/agent/order-status",
+  };
+
+  const path = endpoints[name];
+  if (!path) throw new Error(`Unknown tool: ${name}`);
+
+  const url = `${baseUrl}${path}${params.toString() ? "?" + params.toString() : ""}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`Tool call failed: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+export async function GET() {
+  const encoder = new TextEncoder();
+  
+  const stream = new ReadableStream({
+    start(controller) {
+      // Send endpoint event
+      controller.enqueue(encoder.encode(
+        `event: endpoint\ndata: ${JSON.stringify({ uri: "/api/agent/mcp" })}\n\n`
+      ));
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      "Connection": "keep-alive",
+    },
+  });
+}
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+  const { method, params, id } = body;
+  const baseUrl = getBaseUrl(req);
+
+  if (method === "initialize") {
+    return NextResponse.json({
+      jsonrpc: "2.0",
+      id,
+      result: {
+        protocolVersion: "2024-11-05",
+        capabilities: { tools: {} },
+        serverInfo: { name: "led-connection-wms", version: "1.0.0" },
+      },
+    });
+  }
+
+  if (method === "tools/list") {
+    return NextResponse.json({
+      jsonrpc: "2.0",
+      id,
+      result: { tools },
+    });
+  }
+
+  if (method === "tools/call") {
+    const { name, arguments: args } = params;
+    try {
+      const result = await callTool(baseUrl, name, args || {});
+      return NextResponse.json({
+        jsonrpc: "2.0",
+        id,
+        result: {
+          content: [{ type: "text", text: JSON.stringify(result) }],
+        },
+      });
+    } catch (err) {
+      return NextResponse.json({
+        jsonrpc: "2.0",
+        id,
+        error: { code: -32000, message: String(err) },
+      });
+    }
+  }
+
+  return NextResponse.json({
+    jsonrpc: "2.0",
+    id,
+    error: { code: -32601, message: "Method not found" },
+  });
+}
