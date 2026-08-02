@@ -7,7 +7,13 @@ export default function Topbar() {
       {/* Mobile Logo (Hidden on desktop since sidebar has it) */}
       <div className="md:hidden">
         <Link href="/">
-          <Image src="/login.svg" alt="LED Connection" width={24} height={24} />
+          <Image
+            src="/brand/led-connection-logo-orwh.webp"
+            alt="LED Connection"
+            width={800}
+            height={700}
+            className="h-auto w-[92px]"
+          />
         </Link>
       </div>
 

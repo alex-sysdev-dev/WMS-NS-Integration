@@ -11,6 +11,13 @@ type LoginFormProps = {
   initialNextPath: string
   initialMessage: string | null
   initialEmail?: string
+  /**
+   * 'page' centres the card in its own full-height black screen — used by
+   * /login, /update-password and the auth callbacks, which have no surrounding
+   * layout. 'embedded' drops that wrapper and the logo header so the card can
+   * sit inside a page that already provides both, such as the landing hero.
+   */
+  variant?: 'page' | 'embedded'
 }
 
 function normalizeNextPath(value: string): string {
@@ -42,6 +49,7 @@ export default function LoginForm({
   initialNextPath,
   initialMessage,
   initialEmail = '',
+  variant = 'page',
 }: LoginFormProps) {
   const [mode, setMode] = useState<LoginMode>(initialMode)
   const [email, setEmail] = useState(initialEmail)
@@ -163,18 +171,28 @@ export default function LoginForm({
   const isUpdatePassword = mode === 'update-password'
   const submitLabel = isReset ? 'Send Reset Link' : isUpdatePassword ? 'Update Password' : 'Log In'
 
+  const isEmbedded = variant === 'embedded'
+
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4">
-      <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="h-9 w-9 rounded-full border border-orange-500/40 bg-zinc-950 flex items-center justify-center">
-            <Image src="/login.svg" alt="LED Connection" width={20} height={20} className="opacity-90" />
+    <div
+      className={
+        isEmbedded
+          ? 'w-full'
+          : 'min-h-screen bg-black flex items-center justify-center px-4'
+      }
+    >
+      <div className={isEmbedded ? 'w-full' : 'w-full max-w-sm'}>
+        {isEmbedded ? null : (
+          <div className="flex items-center justify-center mb-8">
+            <Image
+              src="/brand/led-connection-logo-orwh.webp"
+              alt="LED Connection"
+              width={800}
+              height={700}
+              className="h-auto w-[168px]"
+            />
           </div>
-          <span className="text-xl font-bold">
-            <span className="text-orange-500">LED</span>
-            <span className="text-zinc-100"> Connection</span>
-          </span>
-        </div>
+        )}
 
         <div className="rounded-2xl border border-zinc-800 bg-zinc-950/85 backdrop-blur-md p-8">
           <h1 className="text-lg mb-1 font-semibold text-zinc-50">{modeTitle(mode)}</h1>
@@ -230,7 +248,10 @@ export default function LoginForm({
               type="submit"
               disabled={loading}
               suppressHydrationWarning
-              className="mt-2 w-full rounded-xl border border-orange-500/50 bg-orange-600/20 py-3 text-sm font-semibold tracking-[0.15em] uppercase text-orange-100 transition-all duration-200 hover:bg-orange-600/35 hover:border-orange-400/70 hover:shadow-[0_0_32px_rgba(210,101,15,0.35)] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              // Solid brand orange, matching the primary action on
+              // ledconnection.com. A translucent fill read as muddy maroon
+              // against the dark card and did not look like a primary button.
+              className="mt-2 w-full rounded-xl bg-[#F07E1E] py-3 text-sm font-bold tracking-[0.15em] uppercase text-[#1A1206] transition-all duration-200 hover:bg-[#FF9038] active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {loading ? 'Working...' : submitLabel}
             </button>
@@ -249,7 +270,7 @@ export default function LoginForm({
             ) : null}
           </div>
 
-          <p className="mt-5 text-center text-[10px] tracking-widest text-zinc-700 uppercase">
+          <p className="mt-5 text-center text-[10px] tracking-widest text-zinc-500 uppercase">
             Secure Access
           </p>
         </div>

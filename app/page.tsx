@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import RootRecoveryRedirect from '@/components/auth/RootRecoveryRedirect'
+import LandingHero from '@/components/landing/LandingHero'
 
 type RootPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
@@ -34,6 +35,12 @@ export default async function RootPage({ searchParams }: RootPageProps) {
   }
 
   // The hash-fragment recovery variant is only visible to the browser, so the
-  // client component decides between recovery and the dashboard.
-  return <RootRecoveryRedirect />
+  // guard runs client-side and forwards only when it sees a recovery link.
+  // Everything else lands on the entry screen.
+  return (
+    <>
+      <RootRecoveryRedirect />
+      <LandingHero />
+    </>
+  )
 }

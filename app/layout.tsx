@@ -32,9 +32,11 @@ export const metadata: Metadata = {
   title: "LED Connection WMS",
   description: "Warehouse management for project-based receiving, fabrication, and shipping.",
   icons: {
-    icon: "/login.svg",
-    shortcut: "/login.svg",
-    apple: "/login.svg",
+    // Transparent variant, not the -orwh one: favicons sit on light browser
+    // chrome, where the white "LED" of the dark-background asset disappears.
+    icon: "/brand/led-connection-logo.png",
+    shortcut: "/brand/led-connection-logo.png",
+    apple: "/brand/led-connection-logo.png",
   },
 };
 
