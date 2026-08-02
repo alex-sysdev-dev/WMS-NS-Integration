@@ -49,14 +49,16 @@ export async function getInboundItems(): Promise<InboundItem[]> {
     serverSupabase.from('inbound_shipments').select('id, supplier, eta, status'),
   ])
 
+  // Degrade to an empty list rather than rethrowing, matching the rest of this
+  // layer. An unreachable database should render an empty page, not a 500.
   if (itemError) {
     logQueryError('Inbound items fetch error:', itemError)
-    throw itemError
+    return []
   }
 
   if (shipmentError) {
     logQueryError('Inbound shipment metadata fetch error:', shipmentError)
-    throw shipmentError
+    return []
   }
 
   const shipmentsById = new Map<string, RawShipmentMeta>(
