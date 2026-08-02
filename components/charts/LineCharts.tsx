@@ -73,7 +73,7 @@ export default function LineCharts({ title, labels, series, description, ySuffix
 
   if (labels.length === 0 || series.length === 0) {
     return (
-      <section className="ops-card rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+      <section className="ops-card rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
         <h2 className="text-xl font-semibold text-zinc-100">{title}</h2>
         <p className="mt-2 text-sm text-zinc-400">{description ?? 'No chart data available yet.'}</p>
       </section>
@@ -105,7 +105,7 @@ export default function LineCharts({ title, labels, series, description, ySuffix
   const xTickStep = Math.max(1, Math.ceil(labels.length / 8))
 
   return (
-    <section className="ops-card rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+    <section className="ops-card rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
       <div className="mb-4">
         <h2 className="text-xl font-semibold text-zinc-100">{title}</h2>
       </div>
@@ -145,7 +145,7 @@ export default function LineCharts({ title, labels, series, description, ySuffix
 
         {animatedSeries.map((line) =>
           line.values.map((value, index) => (
-            <circle key={`${line.name}-${index}`} cx={toX(index)} cy={toY(value)} r="3.2" fill={line.color} stroke="rgba(2,6,23,0.95)" strokeWidth="1.2" />
+            <circle key={`${line.name}-${index}`} cx={toX(index)} cy={toY(value)} r="3.2" fill={line.color} stroke="rgba(21,21,23,0.95)" strokeWidth="1.2" />
           ))
         )}
       </svg>

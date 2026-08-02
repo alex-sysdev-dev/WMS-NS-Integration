@@ -1,5 +1,4 @@
 import Link from 'next/link'
-import Image from 'next/image'
 import { notFound, redirect } from 'next/navigation'
 import KpiTile from '@/components/kpi/KpiTile'
 import { buildAssociateDirectoryRows, generateMockData, synthesizePerformanceRows } from '@/lib/calculations/associates'
@@ -94,7 +93,7 @@ export default async function AssociateDetailPage({ params }: Props) {
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_1.2fr]">
-        <section className="ops-card rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+        <section className="ops-card rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
           <h2 className="text-xl font-semibold text-zinc-100">Associate Profile</h2>
           <dl className="mt-5 grid grid-cols-1 gap-4 text-sm">
             {[
@@ -113,7 +112,7 @@ export default async function AssociateDetailPage({ params }: Props) {
           </dl>
         </section>
 
-        <section className="ops-card rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+        <section className="ops-card rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
           <h2 className="text-xl font-semibold text-zinc-100">Skills and Certifications</h2>
           <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
             {[

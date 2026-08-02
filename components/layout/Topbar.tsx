@@ -3,7 +3,7 @@ import Image from "next/image"
 
 export default function Topbar() {
   return (
-    <header className="h-16 bg-zinc-900 border-b border-zinc-800 flex items-center justify-between px-6">
+    <header className="h-16 bg-[#101012] border-b border-zinc-800 flex items-center justify-between px-6">
       {/* Mobile Logo (Hidden on desktop since sidebar has it) */}
       <div className="md:hidden">
         <Link href="/">

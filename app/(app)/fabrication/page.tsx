@@ -58,14 +58,14 @@ export default async function FabricationPage() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         <KpiTile title="Open Requests" value={kpis.openRequests} />
-        <KpiTile title="Queued" value={kpis.queued} accent="text-amber-100 group-hover:text-amber-50" />
-        <KpiTile title="In Progress" value={kpis.inProgress} accent="text-orange-100 group-hover:text-orange-50" />
-        <KpiTile title="On QC Hold" value={kpis.qcHold} accent="text-rose-100 group-hover:text-rose-50" />
-        <KpiTile title="Short Components" value={kpis.shortComponents} accent="text-orange-100 group-hover:text-orange-50" />
-        <KpiTile title="Completed This Month" value={kpis.completedThisMonth} accent="text-emerald-100 group-hover:text-emerald-50" />
+        <KpiTile title="Queued" value={kpis.queued} />
+        <KpiTile title="In Progress" value={kpis.inProgress} />
+        <KpiTile title="On QC Hold" value={kpis.qcHold} />
+        <KpiTile title="Short Components" value={kpis.shortComponents} />
+        <KpiTile title="Completed This Month" value={kpis.completedThisMonth} />
       </div>
 
-      <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+      <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
         <h2 className="mb-1 text-xl font-semibold text-zinc-100">Build Requests</h2>
         <p className="mb-4 text-sm text-zinc-400">
           One row per requested build, keyed on the project it belongs to.
@@ -79,7 +79,7 @@ export default async function FabricationPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+      <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
         <h2 className="mb-1 text-xl font-semibold text-zinc-100">Component Staging</h2>
         <p className="mb-4 text-sm text-zinc-400">
           Raw parts each build needs. Every line carries a lot number, because inventory here is

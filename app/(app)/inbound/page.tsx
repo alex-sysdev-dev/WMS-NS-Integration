@@ -3,17 +3,12 @@ import { buildInboundStatusTrend, buildSupplierVolume } from '@/lib/calculations
 import { calculateInboundKpis } from '@/lib/calculations/kpi'
 import { getCrossFunctionalKpis, getPutawayTasksCount } from '@/lib/queries/operations'
 import KpiTile from '@/components/kpi/KpiTile'
-import OperationsTrendBoard from '@/components/dashboard/OperationsTrendBoard'
 import DataTable, { type Column } from '@/components/tables/DataTable'
 import LineCharts from '@/components/charts/LineCharts'
 import BarChart from '@/components/charts/BarChart'
 import type { Shipment } from '@/types/inbound'
 
 export const dynamic = 'force-dynamic'
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
-}
 
 export default async function InboundPage() {
   const [shipments, inboundItems, crossKpis, putawayTasks] = await Promise.all([
@@ -25,10 +20,6 @@ export default async function InboundPage() {
   const kpis = calculateInboundKpis(shipments)
   const statusTrend = buildInboundStatusTrend(shipments)
   const supplierVolume = buildSupplierVolume(inboundItems)
-  const flowVolume = kpis.scheduled + kpis.arrived + kpis.received
-  const receivedRate = flowVolume > 0 ? Number(((kpis.received / flowVolume) * 100).toFixed(1)) : 0
-  const arrivalRate = flowVolume > 0 ? Number(((kpis.arrived / flowVolume) * 100).toFixed(1)) : 0
-  const qaRate = flowVolume > 0 ? Number((((crossKpis.inboundQaPending + crossKpis.inboundQaBlocked) / flowVolume) * 100).toFixed(1)) : 0
 
   const columns: Column<Shipment>[] = [
     { header: 'Supplier', accessor: 'supplier' },
@@ -48,47 +39,11 @@ export default async function InboundPage() {
         <KpiTile title="Arrived" value={kpis.arrived} />
         <KpiTile title="Received" value={kpis.received} />
         <KpiTile title="Accuracy" value={99.2} suffix="%" />
-        <KpiTile title="Inventory Risk SKUs" value={crossKpis.inventoryRiskSkus} accent="text-orange-100 group-hover:text-orange-50" />
-        <KpiTile title="Inbound QA Pending" value={crossKpis.inboundQaPending} accent="text-yellow-100 group-hover:text-yellow-50" />
-        <KpiTile title="Inbound QA Blocked" value={crossKpis.inboundQaBlocked} accent="text-rose-100 group-hover:text-rose-50" />
-        <KpiTile title="Putaway Tasks" value={putawayTasks} accent="text-emerald-100 group-hover:text-emerald-50" />
+        <KpiTile title="Inventory Risk SKUs" value={crossKpis.inventoryRiskSkus} />
+        <KpiTile title="Inbound QA Pending" value={crossKpis.inboundQaPending} />
+        <KpiTile title="Inbound QA Blocked" value={crossKpis.inboundQaBlocked} />
+        <KpiTile title="Putaway Tasks" value={putawayTasks} />
       </div>
-
-      <OperationsTrendBoard
-        title="Inbound Receiving Flow"
-        description="Scheduled inbound appointments and receiving conversion."
-        summary="Inbound receiving status."
-        metrics={[
-          {
-            label: 'Scheduled Appointments',
-            color: '#F07E1E',
-            level: clamp(kpis.scheduled * 7, 8, 96),
-            displayValue: `${kpis.scheduled}`,
-            note: 'Expected inbound volume still on the schedule.',
-          },
-          {
-            label: 'Arrival Flow',
-            color: '#6EE7B7',
-            level: clamp(arrivalRate || kpis.arrived * 8, 8, 96),
-            displayValue: `${kpis.arrived}`,
-            note: 'Shipments that have landed and are entering the building flow.',
-          },
-          {
-            label: 'Receipt Conversion',
-            color: '#A78BFA',
-            level: clamp(receivedRate || kpis.received * 8, 8, 96),
-            displayValue: `${kpis.received}`,
-            note: 'Inbound loads fully converted into received inventory state.',
-          },
-          {
-            label: 'QA Exceptions',
-            color: '#F43F5E',
-            level: clamp(qaRate || (crossKpis.inboundQaPending + crossKpis.inboundQaBlocked) * 6, 8, 96),
-            displayValue: `${crossKpis.inboundQaPending + crossKpis.inboundQaBlocked}`,
-            note: 'Inbound items slowed by QA pending or blocked disposition.',
-          },
-        ]}
-      />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <LineCharts

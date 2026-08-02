@@ -357,7 +357,7 @@ export default function PickPackFloorPlan({ layoutData, data, associates }: Prop
       />
 
       {selectedItem && selectedAssignment ? (
-        <section className="ops-card rounded-2xl border border-orange-400/40 bg-[linear-gradient(150deg,rgba(3,7,18,0.97),rgba(15,23,42,0.92))] p-6">
+        <section className="ops-card rounded-2xl border border-orange-400/40 bg-[#151517] p-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h3 className="text-xl font-semibold text-zinc-100">{selectedStation}</h3>

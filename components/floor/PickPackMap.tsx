@@ -38,7 +38,7 @@ export default function PickPackMap({
 }: Props) {
   if (cells.length === 0) {
     return (
-      <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(140deg,rgba(3,7,18,0.96),rgba(15,23,42,0.9))] p-6">
+      <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
         <h2 className="text-xl font-semibold text-zinc-100">{title}</h2>
         <p className="mt-3 text-sm text-zinc-400">No station rows found in `pick_pack_stations` yet.</p>
       </section>
@@ -56,7 +56,7 @@ export default function PickPackMap({
   })
 
   return (
-    <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(145deg,rgba(2,6,23,0.96),rgba(15,23,42,0.86))] p-6">
+    <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold text-zinc-100">{title}</h2>
@@ -92,7 +92,7 @@ export default function PickPackMap({
               key={cell.id}
               className={`relative overflow-hidden rounded-xl border p-3 ${statusTone(cell.status)}`}
               style={{
-                background: `linear-gradient(160deg, rgba(15,23,42,0.7), rgba(15,23,42,0.32)), rgba(240,126,30,${heatOpacity(cell.intensity)})`,
+                background: `linear-gradient(160deg, rgba(0,0,0,0.72), rgba(0,0,0,0.34)), rgba(240,126,30,${heatOpacity(cell.intensity)})`,
               }}
             >
               <div className="text-xs uppercase tracking-wide opacity-85">Station</div>

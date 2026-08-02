@@ -47,23 +47,23 @@ export default async function ExecutiveControlCenter() {
 
   const pipelineTiles = [
     { title: 'Material Received', value: formatCount(kpis.projectsMaterialReceived) },
-    { title: 'In Fabrication', value: formatCount(kpis.projectsInFabrication), accent: 'text-orange-100 group-hover:text-orange-50' },
-    { title: 'Ready to Ship', value: formatCount(kpis.projectsReadyToShip), accent: 'text-emerald-100 group-hover:text-emerald-50' },
-    { title: 'Partially Shipped', value: formatCount(kpis.projectsPartiallyShipped), accent: 'text-amber-100 group-hover:text-amber-50' },
+    { title: 'In Fabrication', value: formatCount(kpis.projectsInFabrication) },
+    { title: 'Ready to Ship', value: formatCount(kpis.projectsReadyToShip) },
+    { title: 'Partially Shipped', value: formatCount(kpis.projectsPartiallyShipped) },
   ]
 
   const flowTiles = [
     { title: 'Open Purchase Orders', value: formatCount(kpis.openPurchaseOrders) },
-    { title: 'Projects Short Material', value: formatCount(kpis.projectsShortMaterial), accent: 'text-rose-100 group-hover:text-rose-50' },
-    { title: 'Shipped This Week', value: formatCount(kpis.shipmentsThisWeek), accent: 'text-emerald-100 group-hover:text-emerald-50' },
-    { title: 'Shipped This Month', value: formatCount(kpis.shipmentsThisMonth), accent: 'text-emerald-100 group-hover:text-emerald-50' },
+    { title: 'Projects Short Material', value: formatCount(kpis.projectsShortMaterial) },
+    { title: 'Shipped This Week', value: formatCount(kpis.shipmentsThisWeek) },
+    { title: 'Shipped This Month', value: formatCount(kpis.shipmentsThisMonth) },
   ]
 
   const qualityTiles = [
-    { title: 'Open Fab Requests', value: formatCount(kpis.openFabRequests), accent: 'text-orange-100 group-hover:text-orange-50' },
-    { title: 'Fab QC Holds', value: formatCount(kpis.fabQcHolds), accent: 'text-rose-100 group-hover:text-rose-50' },
-    { title: 'Bins Never Counted', value: formatCount(kpis.binsNeverCounted), accent: 'text-amber-100 group-hover:text-amber-50' },
-    { title: 'Open Variances', value: formatCount(kpis.openInventoryVariances), accent: 'text-rose-100 group-hover:text-rose-50' },
+    { title: 'Open Fab Requests', value: formatCount(kpis.openFabRequests) },
+    { title: 'Fab QC Holds', value: formatCount(kpis.fabQcHolds) },
+    { title: 'Bins Never Counted', value: formatCount(kpis.binsNeverCounted) },
+    { title: 'Open Variances', value: formatCount(kpis.openInventoryVariances) },
   ]
 
   const attentionColumns: Column<ProjectAttentionRow>[] = [
@@ -88,7 +88,7 @@ export default async function ExecutiveControlCenter() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.92),rgba(15,23,42,0.84))] px-5 py-4 text-sm text-zinc-300">
+        <div className="rounded-2xl border border-zinc-700/70 bg-[#151517] px-5 py-4 text-sm text-zinc-300">
           <div className="text-zinc-400">Last NetSuite sync</div>
           <div className="mt-1 font-semibold text-zinc-100">{formatTimestamp(kpis.snapshotAt)}</div>
         </div>
@@ -107,7 +107,7 @@ export default async function ExecutiveControlCenter() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {pipelineTiles.map((tile) => (
-            <KpiTile key={tile.title} title={tile.title} value={tile.value} accent={tile.accent} />
+            <KpiTile key={tile.title} title={tile.title} value={tile.value} />
           ))}
         </div>
       </section>
@@ -118,7 +118,7 @@ export default async function ExecutiveControlCenter() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {flowTiles.map((tile) => (
-            <KpiTile key={tile.title} title={tile.title} value={tile.value} accent={tile.accent} />
+            <KpiTile key={tile.title} title={tile.title} value={tile.value} />
           ))}
         </div>
       </section>
@@ -129,12 +129,12 @@ export default async function ExecutiveControlCenter() {
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
           {qualityTiles.map((tile) => (
-            <KpiTile key={tile.title} title={tile.title} value={tile.value} accent={tile.accent} />
+            <KpiTile key={tile.title} title={tile.title} value={tile.value} />
           ))}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+      <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
         <h2 className="text-xl font-semibold text-zinc-100">Projects needing attention</h2>
         <p className="mt-1 text-sm text-zinc-400">
           Projects blocked on missing material, fabrication, or a quality hold.

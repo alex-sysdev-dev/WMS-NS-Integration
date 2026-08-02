@@ -1,5 +1,4 @@
 import KpiTile from '@/components/kpi/KpiTile'
-import OperationsTrendBoard from '@/components/dashboard/OperationsTrendBoard'
 import LineCharts from '@/components/charts/LineCharts'
 import BarChart from '@/components/charts/BarChart'
 import { buildStationWorkload, buildTaskFlowTrend, calculateOutboundFloorKpis } from '@/lib/calculations/outbound'
@@ -79,10 +78,6 @@ function queueStateBadge(state: InboundQueueState): string {
   return 'bg-zinc-500/20 text-zinc-300 border-zinc-500/40'
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
-}
-
 export default async function PickPackControlTower() {
   const [data, crossKpis] = await Promise.all([
     getOutboundFloorData(),
@@ -92,9 +87,6 @@ export default async function PickPackControlTower() {
   const kpis = calculateOutboundFloorKpis(data)
   const taskTrend = buildTaskFlowTrend(data.tasks, 12)
   const stationWorkload = buildStationWorkload(data.stations, 10)
-  const throughputRate = clamp((kpis.unitsRemaining > 0 ? (kpis.activeStations / Math.max(kpis.unitsRemaining, 1)) * 180 : 20), 8, 96)
-  const backlogRate = clamp(kpis.openTasks * 4, 8, 96)
-  const lateRate = kpis.openTasks > 0 ? Number(((kpis.lateTasks / kpis.openTasks) * 100).toFixed(1)) : 0
 
   return (
     <div className="space-y-8">
@@ -108,50 +100,14 @@ export default async function PickPackControlTower() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
         <KpiTile title="Open Pick Tasks" value={kpis.openTasks} />
-        <KpiTile title="Late Tasks" value={kpis.lateTasks} accent="text-rose-100 group-hover:text-rose-50" />
-        <KpiTile title="Units Remaining" value={kpis.unitsRemaining} accent="text-amber-100 group-hover:text-amber-50" />
-        <KpiTile title="Active Stations" value={kpis.activeStations} accent="text-emerald-100 group-hover:text-emerald-50" />
-        <KpiTile title="Avg. Utilization" value={kpis.avgUtilization} suffix="%" accent="text-cyan-100 group-hover:text-cyan-50" />
-        <KpiTile title="Inbound QA Pending" value={crossKpis.inboundQaPending} accent="text-yellow-100 group-hover:text-yellow-50" />
-        <KpiTile title="Inbound QA Blocked" value={crossKpis.inboundQaBlocked} accent="text-rose-100 group-hover:text-rose-50" />
-        <KpiTile title="Inventory Risk SKUs" value={crossKpis.inventoryRiskSkus} accent="text-orange-100 group-hover:text-orange-50" />
+        <KpiTile title="Late Tasks" value={kpis.lateTasks} />
+        <KpiTile title="Units Remaining" value={kpis.unitsRemaining} />
+        <KpiTile title="Active Stations" value={kpis.activeStations} />
+        <KpiTile title="Avg. Utilization" value={kpis.avgUtilization} suffix="%" />
+        <KpiTile title="Inbound QA Pending" value={crossKpis.inboundQaPending} />
+        <KpiTile title="Inbound QA Blocked" value={crossKpis.inboundQaBlocked} />
+        <KpiTile title="Inventory Risk SKUs" value={crossKpis.inventoryRiskSkus} />
       </div>
-
-      <OperationsTrendBoard
-        title="Outbound Performance"
-        description="Outbound metrics"
-        summary="Outbound Tracker"
-        metrics={[
-          {
-            label: 'Backlog',
-            color: '#F07E1E',
-            level: backlogRate,
-            displayValue: `${kpis.openTasks}`,
-            note: 'Open pick work still Available.',
-          },
-          {
-            label: 'Late Risk',
-            color: '#F43F5E',
-            level: lateRate,
-            displayValue: `${kpis.lateTasks}`,
-            note: 'Pick work past the planned execution window.',
-          },
-          {
-            label: 'Pick/Pack Station Utilization',
-            color: '#6EE7B7',
-            level: kpis.avgUtilization,
-            displayValue: `${kpis.avgUtilization.toFixed(1)}%`,
-            note: 'Average utilization across the running pack stations.',
-          },
-          {
-            label: 'Work Flow',
-            color: '#A78BFA',
-            level: throughputRate,
-            displayValue: `${kpis.unitsRemaining}`,
-            note: 'Remaining unit volume',
-          },
-        ]}
-      />
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         <LineCharts
@@ -177,7 +133,7 @@ export default async function PickPackControlTower() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+        <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
           <h2 className="text-xl font-semibold text-zinc-100">Open Picks</h2>
           <p className="mt-1 text-sm text-zinc-400">Open Pick Work</p>
 
@@ -217,7 +173,7 @@ export default async function PickPackControlTower() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+        <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
           <h2 className="text-xl font-semibold text-zinc-100">Inbound / QA Queue</h2>
           <p className="mt-1 text-sm text-zinc-400">Shipments Pending Receipt</p>
 

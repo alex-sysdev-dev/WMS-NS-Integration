@@ -7,7 +7,7 @@
  * meant a light-mode OS briefly rendered dark text on a dark card.
  */
 :root {
-  --background: #09090b;
+  --background: #0A0A0B;
   --foreground: #ededed;
 
   /* LED Connection brand orange. */
@@ -56,10 +56,12 @@ th {
     background-color 220ms ease;
 }
 
+/* Lift on hover, but stay monochrome — the shadow does the work, not a colour
+   glow. Matches KpiTile so panels and tiles float the same way. */
 .ops-card:hover {
   transform: translateY(-4px);
-  border-color: rgba(240, 126, 30, 0.7);
-  box-shadow: 0 28px 60px -30px rgba(210, 101, 15, 0.55);
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 28px 58px -22px rgba(0, 0, 0, 0.95);
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -38,14 +38,14 @@ export default async function FabricationQcPage() {
       />
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-5">
-        <KpiTile title="Awaiting Inspection" value={kpis.awaitingInspection} accent="text-amber-100 group-hover:text-amber-50" />
-        <KpiTile title="Passed" value={kpis.passed} accent="text-emerald-100 group-hover:text-emerald-50" />
-        <KpiTile title="Failed" value={kpis.failed} accent="text-rose-100 group-hover:text-rose-50" />
-        <KpiTile title="Rework Open" value={kpis.reworkOpen} accent="text-orange-100 group-hover:text-orange-50" />
+        <KpiTile title="Awaiting Inspection" value={kpis.awaitingInspection} />
+        <KpiTile title="Passed" value={kpis.passed} />
+        <KpiTile title="Failed" value={kpis.failed} />
+        <KpiTile title="Rework Open" value={kpis.reworkOpen} />
         <KpiTile title="Pass Rate" value={kpis.passRate} suffix="%" />
       </div>
 
-      <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+      <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
         <h2 className="mb-1 text-xl font-semibold text-zinc-100">Inspection Log</h2>
         <p className="mb-4 text-sm text-zinc-400">
           Every inspection, pass or fail, against the build and project it belongs to.

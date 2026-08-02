@@ -43,14 +43,14 @@ export default async function WarehouseQcPage() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         <KpiTile title="Bins In Use" value={`${kpis.binsInUse} / ${kpis.binsDefined}`} />
-        <KpiTile title="Item / Lot / Bin Records" value={kpis.itemLotBinRecords} accent="text-orange-100 group-hover:text-orange-50" />
-        <KpiTile title="Count Coverage" value={kpis.countCoverage} suffix="%" accent="text-cyan-100 group-hover:text-cyan-50" />
-        <KpiTile title="Never Counted" value={kpis.neverCounted} accent="text-amber-100 group-hover:text-amber-50" />
-        <KpiTile title="Open Variances" value={kpis.openVariances} accent="text-rose-100 group-hover:text-rose-50" />
-        <KpiTile title="Counts Posted To Date" value={0} accent="text-orange-100 group-hover:text-orange-50" />
+        <KpiTile title="Item / Lot / Bin Records" value={kpis.itemLotBinRecords} />
+        <KpiTile title="Count Coverage" value={kpis.countCoverage} suffix="%" />
+        <KpiTile title="Never Counted" value={kpis.neverCounted} />
+        <KpiTile title="Open Variances" value={kpis.openVariances} />
+        <KpiTile title="Counts Posted To Date" value={0} />
       </div>
 
-      <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+      <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
         <h2 className="mb-1 text-xl font-semibold text-zinc-100">Inventory Health by Bin</h2>
         <p className="mb-4 text-sm text-zinc-400">
           Balances are tracked at item + lot + bin, so the same bin can hold two lots of the same
@@ -65,7 +65,7 @@ export default async function WarehouseQcPage() {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+      <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
         <h2 className="mb-2 text-xl font-semibold text-zinc-100">Cycle Counting</h2>
         <p className="max-w-3xl text-sm leading-relaxed text-zinc-400">
           No cycle count has ever been reconciled in NetSuite — there are zero inventory adjustments

@@ -94,7 +94,7 @@ export default function Sidebar({ associateLinks = [] }: Props) {
     }`
 
   return (
-    <aside className="w-64 bg-zinc-900 border-r border-zinc-800 flex flex-col justify-between">
+    <aside className="w-64 bg-[#101012] border-r border-zinc-800 flex flex-col justify-between">
       <div className="flex flex-col min-h-0">
         <Link href="/dashboard">
           <div className="flex items-center gap-3 p-6 cursor-pointer">
@@ -161,7 +161,7 @@ export default function Sidebar({ associateLinks = [] }: Props) {
                     </div>
 
                     {associatesOpen && associateLinks.length > 0 && (
-                      <div className="ml-3 mt-1 max-h-52 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950/60">
+                      <div className="ml-3 mt-1 max-h-52 overflow-y-auto rounded-lg border border-zinc-800 bg-[#0A0A0B]/60">
                         {associateLinks.map((associate) => {
                           const detailPath = `/associates/${encodeURIComponent(associate.employeeId)}`
                           const isDetailActive = pathname === detailPath
@@ -194,7 +194,7 @@ export default function Sidebar({ associateLinks = [] }: Props) {
         <button
           type="button"
           onClick={toggleTheme}
-          className="w-14 h-7 rounded-full bg-zinc-950 border border-zinc-700 flex items-center px-1 transition-colors cursor-pointer"
+          className="w-14 h-7 rounded-full bg-[#0A0A0B] border border-zinc-700 flex items-center px-1 transition-colors cursor-pointer"
           aria-label="Toggle dark mode"
         >
           <div

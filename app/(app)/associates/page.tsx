@@ -1,5 +1,4 @@
 import BarChart from '@/components/charts/BarChart'
-import OperationsTrendBoard from '@/components/dashboard/OperationsTrendBoard'
 import KpiTile from '@/components/kpi/KpiTile'
 import AssociatesTable from '@/components/associates/AssociatesTable'
 import { buildAssociateDirectoryRows, generateMockData, normalizePerformanceNames, synthesizePerformanceRows } from '@/lib/calculations/associates'
@@ -85,10 +84,6 @@ function atRiskPerformers(rows: AssociatePerformanceRow[]): AssociatePerformance
     .slice(0, 8)
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
-}
-
 export default async function AssociatesPage() {
   const [rawMatrixRows, rawPerformanceRows] = await Promise.all([
     getAssociateSkillMatrix(),
@@ -112,11 +107,6 @@ export default async function AssociatesPage() {
   const directoryRows = buildAssociateDirectoryRows(matrixRows, performanceRows)
   const topRows = topPerformers(performanceRows)
   const riskRows = atRiskPerformers(performanceRows)
-  const trackedRate = workforce.totalAssociates > 0 ? Number(((workforce.trackedAssociates / workforce.totalAssociates) * 100).toFixed(1)) : 0
-  const riskRate = workforce.trackedAssociates > 0 ? Number(((workforce.belowTarget / workforce.trackedAssociates) * 100).toFixed(1)) : 0
-  const strengthRate = workforce.trackedAssociates > 0 ? Number(((workforce.aboveTarget / workforce.trackedAssociates) * 100).toFixed(1)) : 0
-  const coverageRate = workforce.totalAssociates > 0 ? Number((((workforce.forkliftCertified + workforce.clampCertified) / (workforce.totalAssociates * 2)) * 100).toFixed(1)) : 0
-
   const topLabels = topRows.map((row) => row.full_name.split(' ')[0])
   const topSeries = [
     {
@@ -144,7 +134,7 @@ export default async function AssociatesPage() {
           </p>
         </div>
 
-        <div className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.92),rgba(15,23,42,0.84))] px-5 py-4 text-sm text-zinc-300">
+        <div className="rounded-2xl border border-zinc-700/70 bg-[#151517] px-5 py-4 text-sm text-zinc-300">
           <div className="text-zinc-400">Performance basis</div>
           <div className="mt-1 font-semibold text-zinc-100">Current-day UPH</div>
         </div>
@@ -152,48 +142,12 @@ export default async function AssociatesPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-6 gap-6">
         <KpiTile title="Associates" value={workforce.totalAssociates} />
-        <KpiTile title="Tracked Today" value={workforce.trackedAssociates} accent="text-cyan-100 group-hover:text-cyan-50" />
-        <KpiTile title="Below Target" value={workforce.belowTarget} accent="text-rose-100 group-hover:text-rose-50" />
-        <KpiTile title="Above Target" value={workforce.aboveTarget} accent="text-emerald-100 group-hover:text-emerald-50" />
-        <KpiTile title="Forklift Cert" value={workforce.forkliftCertified} accent="text-orange-100 group-hover:text-orange-50" />
-        <KpiTile title="Clamp Cert" value={workforce.clampCertified} accent="text-amber-100 group-hover:text-amber-50" />
+        <KpiTile title="Tracked Today" value={workforce.trackedAssociates} />
+        <KpiTile title="Below Target" value={workforce.belowTarget} />
+        <KpiTile title="Above Target" value={workforce.aboveTarget} />
+        <KpiTile title="Forklift Cert" value={workforce.forkliftCertified} />
+        <KpiTile title="Clamp Cert" value={workforce.clampCertified} />
       </div>
-
-      <OperationsTrendBoard
-        title="Associate Performance"
-        description="Current workforce coverage, target attainment, and certification depth."
-        summary="Workforce readiness by active roster and current-day output."
-        metrics={[
-          {
-            label: 'Tracked Output',
-            color: '#F07E1E',
-            level: trackedRate,
-            displayValue: `${workforce.trackedAssociates}`,
-            note: 'Associates with current-day tracked performance events.',
-          },
-          {
-            label: 'Risk Exposure',
-            color: '#F43F5E',
-            level: clamp(riskRate, 8, 96),
-            displayValue: `${workforce.belowTarget}`,
-            note: 'Associates currently below or at risk versus UPH target.',
-          },
-          {
-            label: 'Top-End Strength',
-            color: '#6EE7B7',
-            level: clamp(strengthRate, 8, 96),
-            displayValue: `${workforce.aboveTarget}`,
-            note: 'Associates running above target on today’s tracked work.',
-          },
-          {
-            label: 'Cert Coverage',
-            color: '#A78BFA',
-            level: clamp(coverageRate, 8, 96),
-            displayValue: `${coverageRate.toFixed(1)}%`,
-            note: 'Combined forklift and clamp certification depth across the workforce.',
-          },
-        ]}
-      />
 
       <AssociatesTable rows={directoryRows} />
 
@@ -206,7 +160,7 @@ export default async function AssociatesPage() {
             series={topSeries}
           />
 
-          <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+          <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
             <h2 className="text-xl font-semibold text-zinc-100">Top Performers</h2>
             <p className="mt-2 text-sm text-zinc-400">
               Ranked associates with the strongest tracked UPH for today.
@@ -255,7 +209,7 @@ export default async function AssociatesPage() {
           </section>
         </div>
 
-        <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+        <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
           <h2 className="text-xl font-semibold text-zinc-100">At-Risk Performers</h2>
           <p className="mt-2 text-sm text-zinc-400">
             Current associates below or trailing target UPH.
@@ -300,7 +254,7 @@ export default async function AssociatesPage() {
         </section>
       </div>
 
-      <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+      <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
         <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
             <h2 className="text-xl font-semibold text-zinc-100">Certification Matrix</h2>

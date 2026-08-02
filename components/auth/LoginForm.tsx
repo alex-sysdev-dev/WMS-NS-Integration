@@ -171,8 +171,8 @@ export default function LoginForm({
             <Image src="/login.svg" alt="LED Connection" width={20} height={20} className="opacity-90" />
           </div>
           <span className="text-xl font-bold">
-            <span className="text-orange-500">Blue</span>
-            <span className="text-zinc-100">LineOps</span>
+            <span className="text-orange-500">LED</span>
+            <span className="text-zinc-100"> Connection</span>
           </span>
         </div>
 

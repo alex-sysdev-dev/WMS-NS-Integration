@@ -1,7 +1,6 @@
 "use client"
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { useMemo, useState } from 'react'
 
 export type AssociateDirectoryRow = {
@@ -87,7 +86,7 @@ export default function AssociatesTable({ rows }: Props) {
   ]
 
   return (
-    <section className="ops-card rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+    <section className="ops-card rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-zinc-100">Associate Roster</h2>

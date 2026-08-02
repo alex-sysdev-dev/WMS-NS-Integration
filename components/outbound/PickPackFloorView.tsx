@@ -1,5 +1,4 @@
 import KpiTile from '@/components/kpi/KpiTile'
-import OperationsTrendBoard from '@/components/dashboard/OperationsTrendBoard'
 import PickPackFloorPlan from '@/components/outbound/PickPackFloorPlan'
 import PickPackMap from '@/components/floor/PickPackMap'
 import {
@@ -40,10 +39,6 @@ function capLabel(value: string): string {
     .join(' ')
 }
 
-function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value))
-}
-
 export default async function PickPackFloorView() {
   const [data, layoutData, associates] = await Promise.all([
     getOutboundFloorData(),
@@ -54,9 +49,6 @@ export default async function PickPackFloorView() {
   const throughputUph = calculateThroughputUph(data.tasks)
   const heatCells = buildStationHeatmap(data.stations, data.tasks)
   const pickStations = buildPickStationBoard(data.tasks, 20)
-  const lateRate = floorKpis.openTasks > 0 ? Number(((floorKpis.lateTasks / floorKpis.openTasks) * 100).toFixed(1)) : 0
-  const backlogRate = clamp(floorKpis.openTasks * 4, 8, 96)
-  const throughputRate = clamp(throughputUph * 2, 10, 96)
 
   return (
     <div className="space-y-8">
@@ -69,48 +61,12 @@ export default async function PickPackFloorView() {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
-        <KpiTile title="Throughput (UPH)" value={throughputUph} accent="text-cyan-100 group-hover:text-cyan-50" />
+        <KpiTile title="Throughput (UPH)" value={throughputUph} />
         <KpiTile title="Open Pick Tasks" value={floorKpis.openTasks} />
-        <KpiTile title="Late Tasks" value={floorKpis.lateTasks} accent="text-rose-100 group-hover:text-rose-50" />
-        <KpiTile title="Active Stations" value={floorKpis.activeStations} accent="text-emerald-100 group-hover:text-emerald-50" />
-        <KpiTile title="Avg. Utilization" value={floorKpis.avgUtilization} suffix="%" accent="text-orange-100 group-hover:text-orange-50" />
+        <KpiTile title="Late Tasks" value={floorKpis.lateTasks} />
+        <KpiTile title="Active Stations" value={floorKpis.activeStations} />
+        <KpiTile title="Avg. Utilization" value={floorKpis.avgUtilization} suffix="%" />
       </div>
-
-      <OperationsTrendBoard
-        title="Floor Execution Flow"
-        description="Continuous live view of throughput, backlog, station engagement, and late-task exposure across the pick and pack floor."
-        summary="This Flow keeps the floor page visibly active while the map stays readable and spatially stable."
-        metrics={[
-          {
-            label: 'Throughput',
-            color: '#F07E1E',
-            level: throughputRate,
-            displayValue: `${throughputUph}`,
-            note: 'Recent completed-unit flow translated into hourly pace.',
-          },
-          {
-            label: 'Backlog',
-            color: '#A78BFA',
-            level: backlogRate,
-            displayValue: `${floorKpis.openTasks}`,
-            note: 'Open pick work currently queued or in progress on the floor.',
-          },
-          {
-            label: 'Station Utilization',
-            color: '#6EE7B7',
-            level: floorKpis.avgUtilization,
-            displayValue: `${floorKpis.avgUtilization.toFixed(1)}%`,
-            note: 'Average running utilization across pack stations.',
-          },
-          {
-            label: 'Late Tasks',
-            color: '#F43F5E',
-            level: lateRate,
-            displayValue: `${floorKpis.lateTasks}`,
-            note: 'Late work relative to the current open task pool.',
-          },
-        ]}
-      />
 
       {layoutData.layout && layoutData.items.length > 0 ? (
         <PickPackFloorPlan layoutData={layoutData} data={data} associates={associates} />
@@ -123,7 +79,7 @@ export default async function PickPackFloorView() {
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+        <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
           <h2 className="text-xl font-semibold text-zinc-100">Pack Station Board</h2>
           <p className="mt-1 text-sm text-zinc-400">Source: `pick_pack_stations`</p>
 
@@ -154,7 +110,7 @@ export default async function PickPackFloorView() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-zinc-700/70 bg-[linear-gradient(150deg,rgba(3,7,18,0.95),rgba(15,23,42,0.88))] p-6">
+        <section className="rounded-2xl border border-zinc-700/70 bg-[#151517] p-6">
           <h2 className="text-xl font-semibold text-zinc-100">Pick Station Board</h2>
           <p className="mt-1 text-sm text-zinc-400">Derived from `pick_tasks` station/zone assignments.</p>
 

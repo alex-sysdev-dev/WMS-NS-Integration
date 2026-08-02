@@ -113,7 +113,7 @@ export function buildAssociateDirectoryRows(
     }
   }
 
-  const matrixDirectory = matrixRows.map((row, index) => {
+  const matrixDirectory = matrixRows.map((row) => {
     const performance = performanceByAssociate.get(row.associate_id)
     const seed = row.associate_id || row.employee_id || row.full_name
     const targetUph = performance?.target_uph ?? 82 + (hash(seed) % 22)
@@ -140,7 +140,7 @@ export function buildAssociateDirectoryRows(
   const matrixIds = new Set(matrixRows.map((row) => row.associate_id))
   const performanceOnlyRows = performanceRows
     .filter((row) => !matrixIds.has(row.associate_id))
-    .map((row, index) => {
+    .map((row) => {
       const seed = row.associate_id || row.employee_id || row.full_name
       const targetUph = row.target_uph ?? 88
       const uph = row.uph ?? targetUph

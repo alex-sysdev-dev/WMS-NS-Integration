@@ -32,7 +32,7 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-zinc-100 overflow-hidden">
+    <div className="flex h-screen bg-[#0A0A0B] text-zinc-100 overflow-hidden">
       <Sidebar associateLinks={associateLinks} />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Topbar />
