@@ -41,11 +41,6 @@ yarn-error.log*
 *.build.log
 .codex-build.log
 
-# vercel
-.vercel
-
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-.vercel
