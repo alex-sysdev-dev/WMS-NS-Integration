@@ -3,8 +3,8 @@
 Warehouse management system for **LED Connection**, integrated with NetSuite.
 
 NetSuite is an ERP, not a WMS. It records purchasing, sales orders, and shipments,
-but several things the warehouse actually does have no record type to live in — so
-they currently live in monday.com, spreadsheets, and free-text note fields. This
+but several things the warehouse actually does have no record type to live in so
+we currently live in monday.com, spreadsheets, and free-text note fields. This
 project gives that work a home and writes the results back into NetSuite, so
 project managers see shipping data where they already look.
 
@@ -13,7 +13,7 @@ project managers see shipping data where they already look.
 The design follows from how LED Connection actually operates, which is not how a
 typical WMS assumes:
 
-- **Material is bought per project, not stocked speculatively.** Inventory is
+- **Material is bought per project, not stocked.** Inventory is
   effectively committed to a job before it arrives.
 - **The warehouse is small and material does not sit long.** Throughput and "is
   this project complete?" matter; storage density does not.
