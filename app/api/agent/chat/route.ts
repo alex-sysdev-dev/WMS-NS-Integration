@@ -9,12 +9,12 @@ import {
 } from '@/lib/queries/executive'
 
 // =============================================================================
-// LED Connection WMS OpenAI Chat Agent
+// LED Connection WMS Claude Chat Agent
 // -----------------------------------------------------------------------------
 // Read-only KPI assistant. Mirrors the build note in:
 //   docs/agent-builder-guide.txt
 //
-// The agent uses OpenAI tool calling to answer questions about KPIs by
+// The agent uses Claude tool calling to answer questions about KPIs by
 // invoking the existing /api/agent/* endpoints' underlying query functions.
 // Tool execution happens in-process (no HTTP round-trip), so no base URL
 // or auth needs to flow between routes.
@@ -22,8 +22,10 @@ import {
 
 export const runtime = 'nodejs'
 
-const OPENAI_URL = 'https://api.openai.com/v1/chat/completions'
-const MODEL = process.env.OPENAI_AGENT_MODEL ?? 'gpt-4o-mini'
+const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages'
+const ANTHROPIC_VERSION = '2023-06-01'
+const MODEL = process.env.ANTHROPIC_AGENT_MODEL ?? 'claude-haiku-4-5'
+const MAX_TOKENS = 1024
 const MAX_TOOL_LOOPS = 6
 
 // -----------------------------------------------------------------------------
@@ -72,69 +74,54 @@ const TREND_FIELD_MAP: Record<string, string> = {
 
 const TOOLS = [
   {
-    type: 'function' as const,
-    function: {
-      name: 'get_kpi_snapshot',
-      description:
-        'Get the current executive KPI snapshot: throughput, on-time ship %, CPT risk orders, active orders, pick/pack queues, yard occupancy, dock utilization, deadlined orders, labor, quality, and safety. Use this for any "right now" or "current" KPI question.',
-      parameters: { type: 'object', properties: {}, required: [] },
-    },
+    name: 'get_kpi_snapshot',
+    description:
+      'Get the current executive KPI snapshot: throughput, on-time ship %, CPT risk orders, active orders, pick/pack queues, yard occupancy, dock utilization, deadlined orders, labor, quality, and safety. Use this for any "right now" or "current" KPI question.',
+    input_schema: { type: 'object', properties: {}, required: [] },
   },
   {
-    type: 'function' as const,
-    function: {
-      name: 'get_kpi_trend',
-      description:
-        'Get historical trend data for one KPI metric. Use this for questions about how a metric has moved over the last hours or days.',
-      parameters: {
-        type: 'object',
-        properties: {
-          metric: { type: 'string', enum: [...TREND_METRICS] },
-          grain: { type: 'string', enum: ['hourly', 'daily'] },
-        },
-        required: ['metric'],
+    name: 'get_kpi_trend',
+    description:
+      'Get historical trend data for one KPI metric. Use this for questions about how a metric has moved over the last hours or days.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        metric: { type: 'string', enum: [...TREND_METRICS] },
+        grain: { type: 'string', enum: ['hourly', 'daily'] },
       },
+      required: ['metric'],
     },
   },
   {
-    type: 'function' as const,
-    function: {
-      name: 'get_max_lines',
-      description:
-        'Get hourly max-line series for active orders, CPT risk orders, and safety incidents. Use when the user asks for max lines or all three together.',
-      parameters: { type: 'object', properties: {}, required: [] },
-    },
+    name: 'get_max_lines',
+    description:
+      'Get hourly max-line series for active orders, CPT risk orders, and safety incidents. Use when the user asks for max lines or all three together.',
+    input_schema: { type: 'object', properties: {}, required: [] },
   },
   {
-    type: 'function' as const,
-    function: {
-      name: 'get_cpt_risk',
-      description:
-        'List CPT risk orders, optionally filtered by bucket (safe, watch, risk, missed, shipped_on_time, shipped_late, or all). Sorted by deadline urgency.',
-      parameters: {
-        type: 'object',
-        properties: {
-          bucket: { type: 'string', enum: [...RISK_BUCKETS] },
-          limit: { type: 'integer', minimum: 1, maximum: 50 },
-        },
-        required: [],
+    name: 'get_cpt_risk',
+    description:
+      'List CPT risk orders, optionally filtered by bucket (safe, watch, risk, missed, shipped_on_time, shipped_late, or all). Sorted by deadline urgency.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        bucket: { type: 'string', enum: [...RISK_BUCKETS] },
+        limit: { type: 'integer', minimum: 1, maximum: 50 },
       },
+      required: [],
     },
   },
   {
-    type: 'function' as const,
-    function: {
-      name: 'get_order_status',
-      description:
-        'Look up status for a single order by order_number or internal id. Returns null when not found.',
-      parameters: {
-        type: 'object',
-        properties: {
-          order_number: { type: 'string' },
-          id: { type: 'string' },
-        },
-        required: [],
+    name: 'get_order_status',
+    description:
+      'Look up status for a single order by order_number or internal id. Returns null when not found.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        order_number: { type: 'string' },
+        id: { type: 'string' },
       },
+      required: [],
     },
   },
 ] as const
@@ -233,29 +220,25 @@ function buildSystemPrompt(pageContext?: { pathname?: string }): string {
 }
 
 // -----------------------------------------------------------------------------
-// OpenAI message types (minimal — we only use what we need)
+// Claude message types (minimal — we only use what we need)
 // -----------------------------------------------------------------------------
 
-type ChatMessage =
-  | { role: 'system' | 'user'; content: string }
-  | { role: 'assistant'; content: string | null; tool_calls?: ToolCall[] }
-  | { role: 'tool'; content: string; tool_call_id: string }
+type ContentBlock =
+  | { type: 'text'; text: string }
+  | { type: 'tool_use'; id: string; name: string; input: ToolArgs }
+  | { type: 'tool_result'; tool_use_id: string; content: string }
 
-type ToolCall = {
-  id: string
-  type: 'function'
-  function: { name: string; arguments: string }
-}
+type ChatMessage = { role: 'user' | 'assistant'; content: string | ContentBlock[] }
 
 // -----------------------------------------------------------------------------
 // Route handler
 // -----------------------------------------------------------------------------
 
 export async function POST(req: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY
+  const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
     return NextResponse.json(
-      { error: 'config_error', message: 'OPENAI_API_KEY is not set on the server.' },
+      { error: 'config_error', message: 'ANTHROPIC_API_KEY is not set on the server.' },
       { status: 500 }
     )
   }
@@ -274,97 +257,85 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'bad_request', message: 'messages array is required.' }, { status: 400 })
   }
 
-  const messages: ChatMessage[] = [
-    { role: 'system', content: buildSystemPrompt(body.pageContext) },
-    ...userMessages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-  ]
+  const messages: ChatMessage[] = userMessages.map((m) => ({
+    role: m.role as 'user' | 'assistant',
+    content: m.content,
+  }))
 
   const trace: { name: string; arguments: ToolArgs; result_preview: string }[] = []
 
   for (let loop = 0; loop < MAX_TOOL_LOOPS; loop++) {
-    const openaiRes = await fetch(OPENAI_URL, {
+    const anthropicRes = await fetch(ANTHROPIC_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        'x-api-key': apiKey,
+        'anthropic-version': ANTHROPIC_VERSION,
       },
       body: JSON.stringify({
         model: MODEL,
+        max_tokens: MAX_TOKENS,
+        system: buildSystemPrompt(body.pageContext),
         messages,
         tools: TOOLS,
-        tool_choice: 'auto',
+        tool_choice: { type: 'auto' },
         temperature: 0.2,
       }),
     })
 
-    if (!openaiRes.ok) {
-      const errText = await openaiRes.text()
+    if (!anthropicRes.ok) {
+      const errText = await anthropicRes.text()
       return NextResponse.json(
-        { error: 'openai_error', status: openaiRes.status, message: errText.slice(0, 500) },
+        { error: 'anthropic_error', status: anthropicRes.status, message: errText.slice(0, 500) },
         { status: 502 }
       )
     }
 
-    const completion = await openaiRes.json()
-    const choice = completion.choices?.[0]
-    if (!choice) {
-      return NextResponse.json(
-        { error: 'openai_error', message: 'OpenAI returned no choices.' },
-        { status: 502 }
-      )
-    }
+    const completion: { content: ContentBlock[]; stop_reason: string; usage: unknown } =
+      await anthropicRes.json()
 
-    const assistantMsg = choice.message as {
-      role: 'assistant'
-      content: string | null
-      tool_calls?: ToolCall[]
-    }
+    const toolUses = completion.content.filter(
+      (block): block is Extract<ContentBlock, { type: 'tool_use' }> => block.type === 'tool_use'
+    )
 
     // No tool calls -> we have a final answer.
-    if (!assistantMsg.tool_calls || assistantMsg.tool_calls.length === 0) {
+    if (completion.stop_reason !== 'tool_use' || toolUses.length === 0) {
+      const text = completion.content
+        .filter((block): block is Extract<ContentBlock, { type: 'text' }> => block.type === 'text')
+        .map((block) => block.text)
+        .join('\n')
+
       return NextResponse.json({
-        text: assistantMsg.content ?? '',
+        text,
         trace,
         usage: completion.usage,
       })
     }
 
-    // Append assistant turn (with tool_calls) to history.
-    messages.push({
-      role: 'assistant',
-      content: assistantMsg.content,
-      tool_calls: assistantMsg.tool_calls,
-    })
+    // Append assistant turn (with tool_use blocks) to history.
+    messages.push({ role: 'assistant', content: completion.content })
 
-    // Execute each tool call and append the result.
-    for (const call of assistantMsg.tool_calls) {
-      let parsedArgs: ToolArgs = {}
-      try {
-        parsedArgs = call.function.arguments ? JSON.parse(call.function.arguments) : {}
-      } catch {
-        parsedArgs = {}
-      }
-
+    // Execute each tool call and append the results as a single user turn.
+    const toolResults: ContentBlock[] = []
+    for (const call of toolUses) {
       let result: unknown
       try {
-        result = await executeTool(call.function.name, parsedArgs)
+        result = await executeTool(call.name, call.input)
       } catch (err) {
         result = { error: 'tool_exception', message: err instanceof Error ? err.message : String(err) }
       }
 
       const resultJson = JSON.stringify(result)
       trace.push({
-        name: call.function.name,
-        arguments: parsedArgs,
+        name: call.name,
+        arguments: call.input,
         result_preview: resultJson.length > 280 ? resultJson.slice(0, 280) + '…' : resultJson,
       })
 
-      messages.push({
-        role: 'tool',
-        tool_call_id: call.id,
-        content: resultJson,
-      })
+      toolResults.push({ type: 'tool_result', tool_use_id: call.id, content: resultJson })
     }
+
+    messages.push({ role: 'user', content: toolResults })
   }
 
   return NextResponse.json(

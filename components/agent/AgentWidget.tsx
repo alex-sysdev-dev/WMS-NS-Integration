@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation"
 // AgentWidget
 // -----------------------------------------------------------------------------
 // Floating chat panel mounted in the (app) layout. Sends the user's message
-// plus the current pathname to /api/agent/chat, which calls OpenAI with tool
+// plus the current pathname to /api/agent/chat, which calls Claude with tool
 // access to the existing /api/agent/* KPI endpoints. Read-only, text-only.
 // =============================================================================
 
