@@ -1,18 +1,18 @@
-# OpenAI KPI Agent Widget
+# Claude KPI Agent Widget
 
 Floating, read-only AI assistant that renders on every operational page in the
-`(app)` route group. It answers KPI questions in plain text by calling OpenAI
+`(app)` route group. It answers KPI questions in plain text by calling Claude
 with tool access to the existing `/api/agent/*` KPI endpoints.
 
 ## What this PR adds
 
 | File | Purpose |
 | --- | --- |
-| `app/api/agent/chat/route.ts` | POST endpoint. Wraps OpenAI Chat Completions with tool calling. Tool execution happens in-process by importing `lib/queries/executive.ts` directly — no extra HTTP round-trip, no base URL config. |
+| `app/api/agent/chat/route.ts` | POST endpoint. Wraps the Claude Messages API with tool calling. Tool execution happens in-process by importing `lib/queries/executive.ts` directly — no extra HTTP round-trip, no base URL config. |
 | `components/agent/AgentWidget.tsx` | Client component. Floating launcher button + chat panel. Sends `pathname` as page context. |
 | `app/(app)/layout.tsx` | One-line mount of `AgentWidget` so it appears on every page inside the `(app)` group. |
 
-No new npm packages. OpenAI is called via `fetch`, so `package.json` and
+No new npm packages. Claude is called via `fetch`, so `package.json` and
 `package-lock.json` are untouched.
 
 ## Required environment variable
@@ -20,13 +20,13 @@ No new npm packages. OpenAI is called via `fetch`, so `package.json` and
 Add to `.env.local` (and to your Vercel project settings):
 
 ```
-OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-Optional override (defaults to `gpt-4o-mini`):
+Optional override (defaults to `claude-haiku-4-5`):
 
 ```
-OPENAI_AGENT_MODEL=gpt-4o-mini
+ANTHROPIC_AGENT_MODEL=claude-haiku-4-5
 ```
 
 ## Tools the agent can call
@@ -68,16 +68,16 @@ Response:
   "trace": [
     { "name": "get_kpi_snapshot", "arguments": {}, "result_preview": "{...}" }
   ],
-  "usage": { "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0 }
+  "usage": { "input_tokens": 0, "output_tokens": 0 }
 }
 ```
 
 Errors return `{ error, message, ... }` with appropriate status codes
-(`400` bad input, `500` missing key, `502` OpenAI failure, `504` tool loop exceeded).
+(`400` bad input, `500` missing key, `502` Claude API failure, `504` tool loop exceeded).
 
 ## Manual smoke test
 
-1. `OPENAI_API_KEY=sk-... npm run dev`
+1. `ANTHROPIC_API_KEY=sk-ant-... npm run dev`
 2. Open http://localhost:3000/dashboard
 3. Click the blue chat bubble bottom-right.
 4. Try the suggested prompts (snapshot, top 10 CPT risk, throughput trend, deadlined orders).

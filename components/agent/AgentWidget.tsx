@@ -18,7 +18,7 @@ type ChatTurn = {
 
 const SUGGESTED_PROMPTS = [
   "What is my current KPI snapshot?",
-  "Show me the top 10 CPT risk orders.",
+  "Show me pending shipments.",
   "How is throughput per hour trending today?",
   "How many deadlined orders do I have right now?",
 ]
@@ -134,7 +134,7 @@ export default function AgentWidget() {
             {history.length === 0 && !loading && (
               <div className="space-y-3">
                 <p className="text-sm text-zinc-400">
-                  Ask about current KPIs, trends, CPT risk orders, or look up a specific order. I read live values from the operations
+                  Ask about current KPIs, trends, Fab requests, or look up a specific order. I read live values from the operations
                   database.
                 </p>
                 <div className="flex flex-col gap-2">
@@ -203,7 +203,7 @@ export default function AgentWidget() {
                 Send
               </button>
             </div>
-            <p className="mt-2 text-[11px] text-zinc-600">Read-only. Powered by OpenAI + live Supabase KPIs.</p>
+            <p className="mt-2 text-[11px] text-zinc-600">Read-only. Powered by Claude + live NetSuite Data.</p>
           </form>
         </div>
       )}
