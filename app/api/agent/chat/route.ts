@@ -1,23 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabase'
-import {
-  getExecutiveKpiSnapshot,
-  getExecutiveKpiHistoryDaily,
-  getExecutiveKpiHistoryHourly,
-  getExecutiveKpiMaxLines,
-  getExecutiveCptRiskOrders,
-} from '@/lib/queries/executive'
+import { getWarehouseKpis, getProjectsNeedingAttention } from '@/lib/queries/warehouse'
+import type { WarehouseKpiSnapshot } from '@/types/warehouse'
 
 // =============================================================================
 // LED Connection WMS Claude Chat Agent
 // -----------------------------------------------------------------------------
-// Read-only KPI assistant. Mirrors the build note in:
-//   docs/agent-builder-guide.txt
+// Read-only project-pipeline assistant. See docs/agent-widget.md.
 //
-// The agent uses Claude tool calling to answer questions about KPIs by
-// invoking the existing /api/agent/* endpoints' underlying query functions.
-// Tool execution happens in-process (no HTTP round-trip), so no base URL
-// or auth needs to flow between routes.
+// The agent uses Claude tool calling to answer questions about the project
+// pipeline by invoking lib/queries/warehouse.ts directly (in-process — no HTTP
+// round-trip, no base URL/auth needed between routes). Those queries are
+// currently stubs that return honest nulls until the NetSuite sync is built;
+// see lib/queries/warehouse.ts for what "connected" will look like.
 // =============================================================================
 
 export const runtime = 'nodejs'
@@ -32,99 +26,43 @@ const MAX_TOOL_LOOPS = 6
 // Tool schemas (mirrors app/api/agent/mcp/route.ts)
 // -----------------------------------------------------------------------------
 
-const TREND_METRICS = [
-  'throughput_per_hour',
-  'labor_cost_per_unit',
-  'on_time_ship_pct',
-  'cpt_risk_orders',
-  'active_orders',
-  'pending_pick_orders',
-  'pending_pack_orders',
-  'avg_order_age_hours',
-  'yard_occupancy_pct',
-  'dock_utilization_pct',
-  'avg_trailer_dwell_hours',
-  'deadlined_orders',
-  'active_labor',
-  'productivity_per_labor_hour',
-  'quality_score_pct',
-  'safety_incidents_30d',
-] as const
-
-const RISK_BUCKETS = ['all', 'safe', 'watch', 'risk', 'missed', 'shipped_on_time', 'shipped_late'] as const
-
-const TREND_FIELD_MAP: Record<string, string> = {
-  throughput_per_hour: 'throughput_per_hour_avg',
-  labor_cost_per_unit: 'labor_cost_per_unit_avg',
-  on_time_ship_pct: 'on_time_ship_pct_avg',
-  cpt_risk_orders: 'cpt_risk_orders_max',
-  active_orders: 'active_orders_max',
-  pending_pick_orders: 'pending_pick_orders_max',
-  pending_pack_orders: 'pending_pack_orders_max',
-  avg_order_age_hours: 'avg_order_age_hours_avg',
-  yard_occupancy_pct: 'yard_occupancy_pct_avg',
-  dock_utilization_pct: 'dock_utilization_pct_avg',
-  avg_trailer_dwell_hours: 'avg_trailer_dwell_hours_avg',
-  deadlined_orders: 'deadlined_orders_max',
-  active_labor: 'active_labor_max',
-  productivity_per_labor_hour: 'productivity_per_labor_hour_avg',
-  quality_score_pct: 'quality_score_pct_avg',
-  safety_incidents_30d: 'safety_incidents_30d_max',
-}
-
 const TOOLS = [
   {
-    name: 'get_kpi_snapshot',
+    name: 'get_pipeline_status',
     description:
-      'Get the current executive KPI snapshot: throughput, on-time ship %, CPT risk orders, active orders, pick/pack queues, yard occupancy, dock utilization, deadlined orders, labor, quality, and safety. Use this for any "right now" or "current" KPI question.',
+      'Get the current project pipeline snapshot: how many projects are in each stage (material received, in fabrication, ready to ship, partially shipped), open purchase orders, projects short material, shipments this week/month, open fab requests, fab QC holds, bins never counted, and open inventory variances. Fields are "Pending" until the NetSuite sync is connected — never invent a number for a pending field. Use this for any "right now" or "current" pipeline/KPI question.',
     input_schema: { type: 'object', properties: {}, required: [] },
   },
   {
-    name: 'get_kpi_trend',
+    name: 'get_projects_needing_attention',
     description:
-      'Get historical trend data for one KPI metric. Use this for questions about how a metric has moved over the last hours or days.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        metric: { type: 'string', enum: [...TREND_METRICS] },
-        grain: { type: 'string', enum: ['hourly', 'daily'] },
-      },
-      required: ['metric'],
-    },
-  },
-  {
-    name: 'get_max_lines',
-    description:
-      'Get hourly max-line series for active orders, CPT risk orders, and safety incidents. Use when the user asks for max lines or all three together.',
+      'List projects blocked on missing material, fabrication, or a quality hold, with the reason and install date. Returns an empty list until the NetSuite sync is connected.',
     input_schema: { type: 'object', properties: {}, required: [] },
-  },
-  {
-    name: 'get_cpt_risk',
-    description:
-      'List CPT risk orders, optionally filtered by bucket (safe, watch, risk, missed, shipped_on_time, shipped_late, or all). Sorted by deadline urgency.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        bucket: { type: 'string', enum: [...RISK_BUCKETS] },
-        limit: { type: 'integer', minimum: 1, maximum: 50 },
-      },
-      required: [],
-    },
-  },
-  {
-    name: 'get_order_status',
-    description:
-      'Look up status for a single order by order_number or internal id. Returns null when not found.',
-    input_schema: {
-      type: 'object',
-      properties: {
-        order_number: { type: 'string' },
-        id: { type: 'string' },
-      },
-      required: [],
-    },
   },
 ] as const
+
+/** Renders a nullable count the same way ExecutiveControlCenter does: null means "not measured yet," never a bare zero or a raw null the model could misread. */
+function formatKpiField(value: number | string | null): number | string {
+  return value === null ? 'Pending — NetSuite sync not connected yet' : value
+}
+
+function formatSnapshotForTool(kpis: WarehouseKpiSnapshot) {
+  return {
+    snapshotAt: kpis.snapshotAt ?? 'No NetSuite sync has run yet',
+    projectsMaterialReceived: formatKpiField(kpis.projectsMaterialReceived),
+    projectsInFabrication: formatKpiField(kpis.projectsInFabrication),
+    projectsReadyToShip: formatKpiField(kpis.projectsReadyToShip),
+    projectsPartiallyShipped: formatKpiField(kpis.projectsPartiallyShipped),
+    openPurchaseOrders: formatKpiField(kpis.openPurchaseOrders),
+    projectsShortMaterial: formatKpiField(kpis.projectsShortMaterial),
+    shipmentsThisWeek: formatKpiField(kpis.shipmentsThisWeek),
+    shipmentsThisMonth: formatKpiField(kpis.shipmentsThisMonth),
+    openFabRequests: formatKpiField(kpis.openFabRequests),
+    fabQcHolds: formatKpiField(kpis.fabQcHolds),
+    binsNeverCounted: formatKpiField(kpis.binsNeverCounted),
+    openInventoryVariances: formatKpiField(kpis.openInventoryVariances),
+  }
+}
 
 // -----------------------------------------------------------------------------
 // Tool execution
@@ -132,59 +70,16 @@ const TOOLS = [
 
 type ToolArgs = Record<string, unknown>
 
-async function executeTool(name: string, args: ToolArgs): Promise<unknown> {
+async function executeTool(name: string, _args: ToolArgs): Promise<unknown> {
   switch (name) {
-    case 'get_kpi_snapshot': {
-      const snapshot = await getExecutiveKpiSnapshot()
-      return snapshot ?? { error: 'not_found', message: 'No executive KPI snapshot was found.' }
+    case 'get_pipeline_status': {
+      const kpis = await getWarehouseKpis()
+      return formatSnapshotForTool(kpis)
     }
 
-    case 'get_kpi_trend': {
-      const metric = String(args.metric ?? '')
-      const grain = String(args.grain ?? 'hourly')
-      const field = TREND_FIELD_MAP[metric]
-      if (!field) {
-        return { error: 'bad_request', message: `Unknown metric: ${metric}`, supported: Object.keys(TREND_FIELD_MAP) }
-      }
-      const rows =
-        grain === 'daily'
-          ? await getExecutiveKpiHistoryDaily(30)
-          : await getExecutiveKpiHistoryHourly(24)
-      return {
-        metric,
-        grain,
-        data: rows.map((row) => ({
-          bucket_at: row.bucket_at,
-          value: (row as Record<string, unknown>)[field] ?? null,
-        })),
-      }
-    }
-
-    case 'get_max_lines': {
-      const data = await getExecutiveKpiMaxLines(48)
-      return { grain: 'hourly', data }
-    }
-
-    case 'get_cpt_risk': {
-      const bucket = (args.bucket as string) ?? 'all'
-      const limit = Math.min(50, Math.max(1, Number(args.limit) || 10))
-      const rows = await getExecutiveCptRiskOrders(limit)
-      const filtered = bucket === 'all' ? rows : rows.filter((o) => o.risk_bucket === bucket)
-      return { bucket, limit, count: filtered.length, data: filtered }
-    }
-
-    case 'get_order_status': {
-      const id = args.id ? String(args.id) : null
-      const orderNumber = args.order_number ? String(args.order_number) : null
-      if (!id && !orderNumber) {
-        return { error: 'bad_request', message: 'Provide id or order_number.' }
-      }
-      let query = supabase.from('order_cpt_risk').select('*')
-      query = id ? query.eq('order_id', id) : query.eq('order_number', orderNumber!)
-      const { data, error } = await query.maybeSingle()
-      if (error) return { error: 'server_error', message: error.message }
-      if (!data) return { found: false, data: null }
-      return { found: true, data }
+    case 'get_projects_needing_attention': {
+      const rows = await getProjectsNeedingAttention()
+      return { count: rows.length, data: rows }
     }
 
     default:
@@ -199,23 +94,21 @@ async function executeTool(name: string, args: ToolArgs): Promise<unknown> {
 function buildSystemPrompt(pageContext?: { pathname?: string }): string {
   const page = pageContext?.pathname ? ` The user is currently viewing ${pageContext.pathname}.` : ''
   return [
-    'You are the LED Connection WMS assistant — a read-only KPI helper for a fulfillment center operations platform.',
-    `Operating mode: read-only demo. Timezone: America/Chicago.${page}`,
+    'You are the LED Connection WMS assistant — a read-only assistant for a project-based lighting/rigging fabrication and install operation, not a parcel fulfillment center. There is no yard, no trailers, no dock, and no parcel cutoff times — do not use that language.',
+    `Operating mode: read-only. Timezone: America/Los_Angeles.${page}`,
     '',
     'Capabilities:',
-    '- Answer questions about current KPI snapshot values (throughput, on-time ship %, CPT risk orders, active/pick/pack queues, yard, dock, labor, quality, safety).',
-    '- Answer questions about KPI trends over hours or days.',
-    '- Show max-line series for active orders, CPT risk, and safety.',
-    '- List CPT risk orders by bucket (safe/watch/risk/missed/shipped_on_time/shipped_late).',
-    '- Look up a specific order by order number or id.',
+    '- Report the current project pipeline: how many projects are in each NetSuite job stage (material received, in fabrication, ready to ship, partially shipped), open purchase orders, projects short material, shipments this week/month, open fab requests, fab QC holds, bins never counted, and open inventory variances.',
+    '- List projects that need attention (blocked on material, fabrication, or a quality hold) with the reason and install date.',
     '',
     'Rules:',
-    '- Always call a tool to get real numbers — never invent values.',
-    '- Lead the answer with the number and the time basis (e.g., "as of 14:00 CT", "last 24 hours hourly").',
-    '- Keep answers concise and plain-text. No markdown tables, no charts, no code blocks unless quoting an order id.',
-    '- If the user asks for a write/update/insert/delete or for credentials or raw SQL, refuse with: "I can help with read-only LED Connection WMS KPI, trend, CPT risk, and order lookup questions, but I cannot modify data or expose credentials."',
-    '- If the request is ambiguous (missing metric, grain, or order reference), ask one short clarifying question before calling tools.',
-    '- If a tool returns an error or empty result, say so plainly and do not fabricate a substitute.',
+    '- Always call a tool to get real values — never invent a number.',
+    '- The NetSuite sync that populates these numbers is not connected yet. Any field the tool returns as "Pending — NetSuite sync not connected yet" must be reported exactly that way — say it is pending and explain the sync isn\'t connected. Never substitute zero, an estimate, or a guess for a pending field.',
+    '- Lead the answer with the value (or "Pending") and, when available, the snapshot time basis.',
+    '- Keep answers concise and plain-text. No markdown tables, no charts, no code blocks.',
+    '- If the user asks for a write/update/insert/delete or for credentials or raw SQL, refuse with: "I can help with read-only LED Connection WMS pipeline and project-status questions, but I cannot modify data or expose credentials."',
+    '- If the request is ambiguous, ask one short clarifying question before calling tools.',
+    '- If a tool returns an error, say so plainly and do not fabricate a substitute.',
   ].join('\n')
 }
 

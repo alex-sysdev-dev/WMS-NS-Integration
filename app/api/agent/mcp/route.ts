@@ -7,60 +7,16 @@ function getBaseUrl(req: NextRequest) {
 
 const tools = [
   {
-    name: "get_kpi_snapshot",
-    description: "Get current executive KPI snapshot for LED Connection.",
+    name: "get_pipeline_status",
+    description:
+      "Get the current LED Connection project pipeline snapshot (job stages, material flow, fabrication/quality counts). Fields are null/\"Pending\" until the NetSuite sync is connected.",
     inputSchema: { type: "object", properties: {}, required: [] },
   },
   {
-    name: "get_kpi_trend",
-    description: "Get one KPI metric trend over time.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        metric: { type: "string" },
-        grain: { type: "string", enum: ["hourly", "daily"] },
-        start: { type: "string" },
-        end: { type: "string" },
-      },
-      required: ["metric", "grain"],
-    },
-  },
-  {
-    name: "get_max_lines",
-    description: "Get max-line chart data for active orders, CPT risk, and safety.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        grain: { type: "string", enum: ["hourly", "daily"] },
-        start: { type: "string" },
-        end: { type: "string" },
-      },
-      required: [],
-    },
-  },
-  {
-    name: "get_cpt_risk",
-    description: "Get current CPT risk orders.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        bucket: { type: "string" },
-        limit: { type: "integer" },
-      },
-      required: [],
-    },
-  },
-  {
-    name: "get_order_status",
-    description: "Get status for one order by ID or order number.",
-    inputSchema: {
-      type: "object",
-      properties: {
-        order_number: { type: "string" },
-        id: { type: "string" },
-      },
-      required: [],
-    },
+    name: "get_projects_needing_attention",
+    description:
+      "List projects blocked on missing material, fabrication, or a quality hold. Empty until the NetSuite sync is connected.",
+    inputSchema: { type: "object", properties: {}, required: [] },
   },
 ];
 
@@ -71,11 +27,8 @@ async function callTool(baseUrl: string, name: string, args: Record<string, unkn
   });
 
   const endpoints: Record<string, string> = {
-    get_kpi_snapshot: "/api/agent/kpi-snapshot",
-    get_kpi_trend: "/api/agent/kpi-trend",
-    get_max_lines: "/api/agent/max-lines",
-    get_cpt_risk: "/api/agent/cpt-risk",
-    get_order_status: "/api/agent/order-status",
+    get_pipeline_status: "/api/agent/pipeline-status",
+    get_projects_needing_attention: "/api/agent/projects-attention",
   };
 
   const path = endpoints[name];

@@ -8,7 +8,8 @@ import { usePathname } from "next/navigation"
 // -----------------------------------------------------------------------------
 // Floating chat panel mounted in the (app) layout. Sends the user's message
 // plus the current pathname to /api/agent/chat, which calls Claude with tool
-// access to the existing /api/agent/* KPI endpoints. Read-only, text-only.
+// access to the project-pipeline queries in lib/queries/warehouse.ts.
+// Read-only, text-only. See docs/agent-widget.md.
 // =============================================================================
 
 type ChatTurn = {
@@ -17,10 +18,10 @@ type ChatTurn = {
 }
 
 const SUGGESTED_PROMPTS = [
-  "What is my current KPI snapshot?",
-  "Show me pending shipments.",
-  "How is throughput per hour trending today?",
-  "How many deadlined orders do I have right now?",
+  "What does my project pipeline look like right now?",
+  "Which projects need attention?",
+  "How many shipments went out this week?",
+  "Is the NetSuite sync connected yet?",
 ]
 
 export default function AgentWidget() {
@@ -116,7 +117,7 @@ export default function AgentWidget() {
               <span className="h-2 w-2 rounded-full bg-orange-500" aria-hidden />
               <div className="flex flex-col">
                 <span className="text-sm font-semibold text-zinc-100">Ops Intelligence</span>
-                <span className="text-[11px] text-zinc-500">read-only KPI assistant</span>
+                <span className="text-[11px] text-zinc-500">read-only pipeline assistant</span>
               </div>
             </div>
             <button
@@ -134,8 +135,8 @@ export default function AgentWidget() {
             {history.length === 0 && !loading && (
               <div className="space-y-3">
                 <p className="text-sm text-zinc-400">
-                  Ask about current KPIs, trends, Fab requests, or look up a specific order. I read live values from the operations
-                  database.
+                  Ask about the project pipeline, material flow, fabrication status, or which projects need attention.
+                  The NetSuite sync isn&apos;t connected yet, so counts show as Pending until it is.
                 </p>
                 <div className="flex flex-col gap-2">
                   {SUGGESTED_PROMPTS.map((p) => (
@@ -203,7 +204,9 @@ export default function AgentWidget() {
                 Send
               </button>
             </div>
-            <p className="mt-2 text-[11px] text-zinc-600">Read-only. Powered by Claude + live NetSuite Data.</p>
+            <p className="mt-2 text-[11px] text-zinc-600">
+              Read-only. Powered by Claude — reads WMS pipeline data; NetSuite sync not connected yet.
+            </p>
           </form>
         </div>
       )}
