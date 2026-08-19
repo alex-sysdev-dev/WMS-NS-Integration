@@ -1,14 +1,14 @@
-BlueLineOps Operational Intelligence
+LED Connection Operational Intelligence
 Agent Builder Click-By-Click UI Guide
 
 PURPOSE
-This guide is the literal UI walkthrough for building the first BlueLineOps agent in OpenAI Agent Builder.
+This guide is the literal UI walkthrough for building the first LED Connection agent in OpenAI Agent Builder.
 Use it alongside these reference files:
-- BlueLineOps Operational Intelligenc_first_agent.txt
-- BlueLineOps Operational Intelligenc_Node_config.txt
-- BlueLineOps Operational Intelligenc_classifier_schema.txt
-- BlueLineOps Operational Intelligenc_exact_tool_endpoint_list.txt
-- BlueLineOps Operational Intelligenc_starter_system_prompts_each_agent_node.txt
+- LED Connection Operational Intelligenc_first_agent.txt
+- LED Connection Operational Intelligenc_Node_config.txt
+- LED Connection Operational Intelligenc_classifier_schema.txt
+- LED Connection Operational Intelligenc_exact_tool_endpoint_list.txt
+- LED Connection Operational Intelligenc_starter_system_prompts_each_agent_node.txt
 
 ASSUMPTIONS
 - You are already in the OpenAI Platform Agent Builder canvas.
@@ -26,7 +26,7 @@ PART 1 - CREATE THE WORKFLOW
 2. In the left navigation, click Agent Builder.
 3. Click Create.
 4. Name the workflow:
-   BlueLineOps Operational Intelligence
+   LED Connection Operational Intelligence
 5. Leave it as a draft.
 
 PART 2 - ADD THE START NODE
@@ -36,7 +36,7 @@ PART 2 - ADD THE START NODE
 3. In the right-side settings panel, do not overconfigure it.
 4. Leave input as the default user message input.
 5. If there is a state area, add these defaults if the UI supports state:
-   - app_name = BlueLineOps Operational Intelligence for Logistics
+   - app_name = LED Connection Operational Intelligence for Logistics
    - mode = read_only_demo
    - timezone = America/Chicago
    - default_grain = hourly
@@ -59,9 +59,9 @@ PART 3 - ADD GUARDRAILS
    - requests to insert, update, delete, alter, or drop data
    - requests for secrets, keys, or credentials
    - unrestricted raw SQL requests
-   - unrelated questions outside BlueLineOps operational intelligence scope
+   - unrelated questions outside LED Connection operational intelligence scope
 7. If the node supports custom refusal text, use:
-   I can help with read-only BlueLineOps KPI, trend, CPT risk, and order lookup questions, but I cannot modify data or expose credentials.
+   I can help with read-only LED Connection KPI, trend, CPT risk, and order lookup questions, but I cannot modify data or expose credentials.
 8. Save the node.
 
 PART 4 - ADD THE CLASSIFIER AGENT
@@ -76,10 +76,10 @@ PART 4 - ADD THE CLASSIFIER AGENT
 7. Set the model to:
    GPT-5-mini
 8. In the system instructions area, paste PROMPT 1 from:
-   BlueLineOps Operational Intelligenc_starter_system_prompts_each_agent_node.txt
+   LED Connection Operational Intelligenc_starter_system_prompts_each_agent_node.txt
 9. Find the structured output or response schema area.
 10. Create fields exactly as defined in:
-   BlueLineOps Operational Intelligenc_classifier_schema.txt
+   LED Connection Operational Intelligenc_classifier_schema.txt
 11. Add these fields:
    - intent
    - metric
@@ -275,7 +275,7 @@ If endpoint params are wrong:
 1. Open the query node.
 2. inspect parameter mapping.
 3. compare against:
-   BlueLineOps Operational Intelligenc_exact_tool_endpoint_list.txt
+   LED Connection Operational Intelligenc_exact_tool_endpoint_list.txt
 4. test again.
 
 If answer is too vague:
@@ -288,7 +288,7 @@ PART 11 - PUBLISH
 
 1. When Preview is stable, click Publish.
 2. Give the version a clear name:
-   BlueLineOps v1 Read-Only KPI Demo
+   LED Connection v1 Read-Only KPI Demo
 3. Save the workflow ID.
 4. Keep this version narrow.
 
