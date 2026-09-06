@@ -34,8 +34,15 @@ yarn-error.log*
 .env*
 !.env.example
 
-# local editor / agent config — machine-specific absolute paths
-.claude/
+# local editor / agent config
+# Shared agent guardrails are tracked on purpose. Machine-specific settings
+# (absolute paths, personal allow list) are not. See docs/agent-guardrails.md.
+.claude/*
+!.claude/settings.json
+!.claude/agents/
+!.claude/hooks/
+!.claude/skills/
+.claude/settings.local.json
 
 # build logs
 *.build.log
@@ -47,3 +54,7 @@ next-env.d.ts
 
 # local editor config — machine-specific
 .vscode/
+
+# fabrication run store — real operator time logs, not source. Interim home for
+# tact time until fabrication exists in NetSuite. Back this up with app data.
+/data/

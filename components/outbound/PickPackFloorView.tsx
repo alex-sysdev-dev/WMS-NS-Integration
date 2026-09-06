@@ -9,7 +9,6 @@ import {
 } from '@/lib/calculations/outbound'
 import { getOutboundFloorData } from '@/lib/queries/outbound'
 import { getFacilityLayoutData } from '@/lib/queries/layouts'
-import { getAssociateCurrentPerformance } from '@/lib/queries/associates'
 import type { PackStationStatus } from '@/types/outbound'
 
 function stationStatusBadge(status: PackStationStatus): string {
@@ -40,10 +39,9 @@ function capLabel(value: string): string {
 }
 
 export default async function PickPackFloorView() {
-  const [data, layoutData, associates] = await Promise.all([
+  const [data, layoutData] = await Promise.all([
     getOutboundFloorData(),
     getFacilityLayoutData('pick_pack_main'),
-    getAssociateCurrentPerformance(),
   ])
   const floorKpis = calculateOutboundFloorKpis(data)
   const throughputUph = calculateThroughputUph(data.tasks)
@@ -69,7 +67,7 @@ export default async function PickPackFloorView() {
       </div>
 
       {layoutData.layout && layoutData.items.length > 0 ? (
-        <PickPackFloorPlan layoutData={layoutData} data={data} associates={associates} />
+        <PickPackFloorPlan layoutData={layoutData} data={data} />
       ) : (
         <PickPackMap
           cells={heatCells}

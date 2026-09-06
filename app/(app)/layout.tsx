@@ -1,11 +1,8 @@
 import Sidebar from "@/components/layout/Sidebar";
+import { getSidebarFabTeam } from "@/lib/fab-team";
 import Topbar from "@/components/layout/Topbar";
 import AgentWidget from "@/components/agent/AgentWidget";
-import { getAssociateSkillMatrix } from "@/lib/queries/associates";
-import { resolveAssociateLinks } from "@/lib/calculations/associates";
-import { isLocalDevAccessEnabled } from "@/lib/dev-access";
-import { createSupabaseAuthServerClient } from "@/lib/supabase-auth-server";
-import { cookies } from "next/headers";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { redirect } from "next/navigation";
 
 export default async function AppLayout({
@@ -13,27 +10,19 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const matrixRows = await getAssociateSkillMatrix();
-  const associateLinks = resolveAssociateLinks(matrixRows);
+  const fabTeamLinks = getSidebarFabTeam();
 
-  if (!isLocalDevAccessEnabled()) {
-    const cookieStore = await cookies();
-    const supabase = createSupabaseAuthServerClient(
-      () => cookieStore.getAll(),
-      () => {}
-    );
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+  // Returns the local development user when that bypass is enabled, so this
+  // stays a single null check regardless of which identity path is live.
+  const user = await getCurrentUser();
 
-    if (!user) {
-      redirect("/login");
-    }
+  if (!user) {
+    redirect("/login");
   }
 
   return (
     <div className="flex h-screen bg-[#0A0A0B] text-zinc-100 overflow-hidden">
-      <Sidebar associateLinks={associateLinks} />
+      <Sidebar fabTeamLinks={fabTeamLinks} />
       <div className="flex flex-col flex-1 overflow-hidden">
         <Topbar />
         <main className="flex-1 overflow-y-auto p-6">

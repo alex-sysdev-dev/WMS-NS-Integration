@@ -1,5 +1,3 @@
-import { serverSupabase } from '@/lib/supabase-server'
-import { logQueryError } from '@/lib/queries/query-log'
 import type {
   ExecutiveCptRiskOrder,
   ExecutiveKpiForecastRow,
@@ -8,119 +6,49 @@ import type {
   ExecutiveKpiSnapshot,
 } from '@/types/executive'
 
+/**
+ * Executive KPIs have no source, and most of them never described LED
+ * Connection in the first place.
+ *
+ * These read `executive_kpi_snapshot`, `executive_kpi_max_lines`,
+ * `executive_kpi_forecast_daily`, and `order_cpt_risk`, all inherited from the
+ * scaffolding this project was started from. That store is gone and NetSuite
+ * is the only datastore, so every one of them returns empty.
+ *
+ * Do not port these shapes to NetSuite as they stand. CPT (critical pull time)
+ * risk is a parcel-carrier concept that never described LED Connection: it
+ * assumes orders race a daily carrier cutoff. LED ships project freight through
+ * Rock City and Total One, the project is the unit of work rather than the
+ * sales order, and there is no cutoff clock to miss. Rebuilding these against
+ * NetSuite means deciding what leadership actually wants to see, not
+ * translating these columns.
+ *
+ * Callers render an empty state with a visible notice. A dashboard of zeroes
+ * must not read as a quiet day.
+ */
+
+export const EXECUTIVE_SOURCE_READY = false
+
 export async function getExecutiveKpiSnapshot(): Promise<ExecutiveKpiSnapshot | null> {
-  const { data, error } = await serverSupabase.from('executive_kpi_snapshot').select('*').maybeSingle()
-
-  if (error) {
-    logQueryError('Executive KPI snapshot fetch error:', error)
-    return null
-  }
-
-  return (data as ExecutiveKpiSnapshot | null) ?? null
+  return null
 }
 
-export async function getExecutiveKpiMaxLines(limit = 24): Promise<ExecutiveKpiMaxLineRow[]> {
-  const { data, error } = await serverSupabase
-    .from('executive_kpi_max_lines')
-    .select('bucket_at, active_orders_max, cpt_risk_orders_max, safety_incidents_30d_max')
-    .order('bucket_at', { ascending: false })
-    .limit(limit)
-
-  if (error) {
-    logQueryError('Executive KPI max lines fetch error:', error)
-    return []
-  }
-
-  return ((data as ExecutiveKpiMaxLineRow[] | null) ?? []).reverse()
+export async function getExecutiveKpiMaxLines(_limit = 24): Promise<ExecutiveKpiMaxLineRow[]> {
+  return []
 }
 
-export async function getExecutiveCptRiskOrders(limit = 8): Promise<ExecutiveCptRiskOrder[]> {
-  const { data, error } = await serverSupabase
-    .from('order_cpt_risk')
-    .select(
-      'order_id, order_number, status, cpt_at, cpt_window_label, minutes_to_cpt, hours_to_cpt, order_age_hours, lifecycle_stage, risk_bucket, is_deadlined'
-    )
-    .in('risk_bucket', ['missed', 'risk', 'watch'])
-    .order('is_deadlined', { ascending: false })
-    .order('minutes_to_cpt', { ascending: true })
-    .limit(limit)
-
-  if (error) {
-    logQueryError('Executive CPT risk fetch error:', error)
-    return []
-  }
-
-  return (data as ExecutiveCptRiskOrder[] | null) ?? []
+export async function getExecutiveCptRiskOrders(_limit = 8): Promise<ExecutiveCptRiskOrder[]> {
+  return []
 }
 
-const HISTORY_SELECT = `
-  bucket_at,
-  throughput_per_hour_avg,
-  throughput_basis,
-  labor_cost_per_unit_avg,
-  on_time_ship_pct_avg,
-  cpt_risk_orders_avg,
-  cpt_risk_orders_max,
-  active_orders_avg,
-  active_orders_max,
-  pending_pick_orders_avg,
-  pending_pick_orders_max,
-  pending_pack_orders_avg,
-  pending_pack_orders_max,
-  avg_order_age_hours_avg,
-  yard_occupancy_pct_avg,
-  dock_utilization_pct_avg,
-  avg_trailer_dwell_hours_avg,
-  deadlined_orders_avg,
-  deadlined_orders_max,
-  active_labor_avg,
-  active_labor_max,
-  productivity_per_labor_hour_avg,
-  quality_score_pct_avg,
-  safety_incidents_30d_avg,
-  safety_incidents_30d_max,
-  snapshot_count
-`
-
-async function getExecutiveHistoryRows(
-  table: 'executive_kpi_history_hourly' | 'executive_kpi_history_daily',
-  limit: number
-): Promise<ExecutiveKpiHistoryRow[]> {
-  const { data, error } = await serverSupabase
-    .from(table)
-    .select(HISTORY_SELECT)
-    .order('bucket_at', { ascending: false })
-    .limit(limit)
-
-  if (error) {
-    logQueryError(`Executive KPI history fetch error for ${table}:`, error)
-    return []
-  }
-
-  return ((data as ExecutiveKpiHistoryRow[] | null) ?? []).reverse()
+export async function getExecutiveKpiHistoryHourly(_limit = 24): Promise<ExecutiveKpiHistoryRow[]> {
+  return []
 }
 
-export async function getExecutiveKpiHistoryHourly(limit = 24): Promise<ExecutiveKpiHistoryRow[]> {
-  return getExecutiveHistoryRows('executive_kpi_history_hourly', limit)
+export async function getExecutiveKpiHistoryDaily(_limit = 14): Promise<ExecutiveKpiHistoryRow[]> {
+  return []
 }
 
-export async function getExecutiveKpiHistoryDaily(limit = 14): Promise<ExecutiveKpiHistoryRow[]> {
-  return getExecutiveHistoryRows('executive_kpi_history_daily', limit)
-}
-
-export async function getExecutiveKpiForecastDaily(limit = 14): Promise<ExecutiveKpiForecastRow[]> {
-  const { data, error } = await serverSupabase
-    .from('executive_kpi_forecast_daily')
-    .select(
-      'forecast_date, active_orders_forecast, cpt_risk_orders_forecast, throughput_per_hour_forecast, active_orders_low, active_orders_high, cpt_risk_orders_low, cpt_risk_orders_high, throughput_per_hour_low, throughput_per_hour_high, forecast_method'
-    )
-    .order('forecast_date', { ascending: true })
-    .limit(limit)
-
-  if (error) {
-    logQueryError('Executive KPI forecast fetch error:', error)
-    return []
-  }
-
-  return (data as ExecutiveKpiForecastRow[] | null) ?? []
+export async function getExecutiveKpiForecastDaily(_limit = 14): Promise<ExecutiveKpiForecastRow[]> {
+  return []
 }

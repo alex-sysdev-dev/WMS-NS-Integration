@@ -4,19 +4,26 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState } from "react"
 
-type AssociateLink = {
-  employeeId: string
+type FabTeamLink = {
+  id: string
   fullName: string
+  roleLabel: string
 }
 
 type Props = {
-  associateLinks?: AssociateLink[]
+  fabTeamLinks?: FabTeamLink[]
 }
 
 type NavLink = {
   name: string
   href: string
   hasDropdown?: boolean
+  /**
+   * Highlight only on an exact path match. Needed where a section index sits at
+   * the parent of its own children, like /fabrication above /fabrication/floor,
+   * which would otherwise light up two links at once.
+   */
+  exact?: boolean
 }
 
 type NavSection = {
@@ -43,7 +50,11 @@ const sections: NavSection[] = [
   },
   {
     label: "Fabrication",
-    links: [{ name: "Build Queue", href: "/fabrication" }],
+    links: [
+      { name: "Build Queue", href: "/fabrication", exact: true },
+      { name: "Fab Floor", href: "/fabrication/floor" },
+      { name: "Tact Time", href: "/fabrication/tact" },
+    ],
   },
   {
     label: "Shipping",
@@ -61,14 +72,14 @@ const sections: NavSection[] = [
   },
   {
     label: "People",
-    links: [{ name: "Associates", href: "/associates", hasDropdown: true }],
+    links: [{ name: "Fab Team", href: "/fab-team", hasDropdown: true }],
   },
 ]
 
-export default function Sidebar({ associateLinks = [] }: Props) {
+export default function Sidebar({ fabTeamLinks = [] }: Props) {
   const pathname = usePathname()
-  const onAssociatesSection = pathname.startsWith("/associates")
-  const [associatesOpen, setAssociatesOpen] = useState(onAssociatesSection)
+  const onFabTeamSection = pathname.startsWith("/fab-team")
+  const [fabTeamOpen, setFabTeamOpen] = useState(onFabTeamSection)
   const [isDark, setIsDark] = useState(() =>
     typeof document === "undefined" ? true : document.documentElement.classList.contains("dark")
   )
@@ -83,8 +94,10 @@ export default function Sidebar({ associateLinks = [] }: Props) {
     }
   }
 
-  const isActive = (href: string) =>
-    pathname === href || pathname.startsWith(`${href}/`)
+  const isActive = (link: NavLink) =>
+    link.exact
+      ? pathname === link.href
+      : pathname === link.href || pathname.startsWith(`${link.href}/`)
 
   const linkClasses = (active: boolean) =>
     `px-4 py-2 rounded-lg cursor-pointer transition ${
@@ -123,7 +136,7 @@ export default function Sidebar({ associateLinks = [] }: Props) {
               )}
 
               {section.links.map((link) => {
-                const active = isActive(link.href)
+                const active = isActive(link)
 
                 if (!link.hasDropdown) {
                   return (
@@ -139,16 +152,16 @@ export default function Sidebar({ associateLinks = [] }: Props) {
                       <Link href={link.href} className="flex-1">
                         <div className={linkClasses(active)}>{link.name}</div>
                       </Link>
-                      {associateLinks.length > 0 && (
+                      {fabTeamLinks.length > 0 && (
                         <button
                           type="button"
-                          onClick={() => setAssociatesOpen((prev) => !prev)}
+                          onClick={() => setFabTeamOpen((prev) => !prev)}
                           className="px-2 py-2 text-zinc-400 hover:text-zinc-200 transition-colors flex-shrink-0"
-                          aria-label="Toggle associate list"
-                          aria-expanded={associatesOpen}
+                          aria-label="Toggle fab team list"
+                          aria-expanded={fabTeamOpen}
                         >
                           <svg
-                            className={`w-3.5 h-3.5 transition-transform duration-200 ${associatesOpen ? "rotate-180" : ""}`}
+                            className={`w-3.5 h-3.5 transition-transform duration-200 ${fabTeamOpen ? "rotate-180" : ""}`}
                             fill="none"
                             viewBox="0 0 24 24"
                             stroke="currentColor"
@@ -160,13 +173,13 @@ export default function Sidebar({ associateLinks = [] }: Props) {
                       )}
                     </div>
 
-                    {associatesOpen && associateLinks.length > 0 && (
+                    {fabTeamOpen && fabTeamLinks.length > 0 && (
                       <div className="ml-3 mt-1 max-h-52 overflow-y-auto rounded-lg border border-zinc-800 bg-[#0A0A0B]/60">
-                        {associateLinks.map((associate) => {
-                          const detailPath = `/associates/${encodeURIComponent(associate.employeeId)}`
+                        {fabTeamLinks.map((teamMember) => {
+                          const detailPath = `/fab-team/${encodeURIComponent(teamMember.id)}`
                           const isDetailActive = pathname === detailPath
                           return (
-                            <Link key={associate.employeeId} href={detailPath}>
+                            <Link key={teamMember.id} href={detailPath}>
                               <div
                                 className={`px-3 py-1.5 text-xs cursor-pointer transition border-b border-zinc-800/60 last:border-0 ${
                                   isDetailActive
@@ -174,8 +187,8 @@ export default function Sidebar({ associateLinks = [] }: Props) {
                                     : "text-zinc-400 hover:bg-zinc-800/60 hover:text-zinc-200"
                                 }`}
                               >
-                                <div className="font-medium truncate">{associate.fullName}</div>
-                                <div className="text-zinc-600 text-[10px]">{associate.employeeId}</div>
+                                <div className="font-medium truncate">{teamMember.fullName}</div>
+                                <div className="text-zinc-600 text-[10px]">{teamMember.roleLabel}</div>
                               </div>
                             </Link>
                           )

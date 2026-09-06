@@ -1,7 +1,5 @@
 import LoginForm from '@/components/auth/LoginForm'
 
-type LoginMode = 'login' | 'reset' | 'update-password'
-
 type LoginPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>
 }
@@ -10,43 +8,33 @@ function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value
 }
 
-function resolveMode(value: string | undefined): LoginMode {
-  if (value === 'reset' || value === 'update-password') {
-    return value
+/**
+ * Auth.js reports failures as ?error=. These are the ones a person can act on;
+ * anything else gets a generic line rather than a raw error code.
+ */
+function resolveMessage(error: string | undefined): string | null {
+  if (!error) {
+    return null
   }
 
-  return 'login'
-}
-
-function resolveMessage(status: string | undefined, error: string | undefined): string | null {
-  if (status === 'complete') {
-    return 'Account confirmed. You can log in now.'
+  if (error === 'AccessDenied') {
+    return 'That account is not permitted to use the warehouse app. Ask Alex to have it added.'
   }
 
-  if (status === 'recovery') {
-    return 'Enter a new password to finish resetting your account.'
+  if (error === 'Verification') {
+    return 'That sign-in link expired. Try again.'
   }
 
-  if (error === 'callback') {
-    return 'That magic link could not be confirmed. Request a fresh link.'
-  }
-
-  return null
+  return 'Sign-in did not complete. Try again.'
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
   const params = (await searchParams) ?? {}
-  const mode = resolveMode(firstParam(params.mode))
-  const nextPath = firstParam(params.next) ?? '/dashboard'
-  const message = resolveMessage(firstParam(params.status), firstParam(params.error))
-  const initialEmail = firstParam(params.email) ?? ''
 
   return (
     <LoginForm
-      initialMode={mode}
-      initialNextPath={nextPath}
-      initialMessage={message}
-      initialEmail={initialEmail}
+      nextPath={firstParam(params.next) ?? '/dashboard'}
+      message={resolveMessage(firstParam(params.error))}
     />
   )
 }

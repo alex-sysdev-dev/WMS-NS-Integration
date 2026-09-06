@@ -5,7 +5,7 @@ import { buildStationWorkload, buildTaskFlowTrend, calculateOutboundFloorKpis } 
 import { getOutboundFloorData } from '@/lib/queries/outbound'
 import { getCrossFunctionalKpis } from '@/lib/queries/operations'
 import type { InboundQueueState, PickTaskStatus } from '@/types/outbound'
-import type { QaResult } from '@/types/qa'
+import type { QaResult } from '@/types/outbound'
 
 function formatDate(value: string | null): string {
   if (!value) {

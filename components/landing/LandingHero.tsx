@@ -54,12 +54,7 @@ export default function LandingHero() {
         </section>
 
         <section className="w-full lg:max-w-[26rem]">
-          <LoginForm
-            initialMode="login"
-            initialNextPath="/dashboard"
-            initialMessage={null}
-            variant="embedded"
-          />
+          <LoginForm nextPath="/dashboard" variant="embedded" />
         </section>
       </div>
     </main>

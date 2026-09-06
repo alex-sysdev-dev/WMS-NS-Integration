@@ -1,17 +1,10 @@
-import type {
-  FabricationInspection,
-  FabricationQcKpis,
-  InventoryHealthRow,
-  WarehouseQcKpis,
-} from '@/types/qc'
+import type { InventoryHealthRow, WarehouseQcKpis } from '@/types/qc'
 
 /**
  * NOT YET CONNECTED.
  *
- * Both QC surfaces return empty results until their sources are wired. As with
- * fabrication, no sample data is fabricated here.
- *
- * Fabrication QC is WMS-owned — there is nothing in NetSuite to read.
+ * Warehouse QC returns empty results until its source is wired. No sample
+ * data is fabricated here.
  *
  * Warehouse QC should read from NetSuite's `inventorybalance` table, which is
  * the correct source for item + lot + bin balances (`inventoryitemlocations`
@@ -29,26 +22,6 @@ export const QC_DATA_SOURCE_READY = false
 /** Verified against the live account: 501 bins defined, 329 carrying stock. */
 export const BINS_DEFINED = 501
 export const BINS_IN_USE = 329
-
-export async function getFabricationInspections(): Promise<FabricationInspection[]> {
-  return []
-}
-
-export function calculateFabricationQcKpis(
-  inspections: FabricationInspection[]
-): FabricationQcKpis {
-  const passed = inspections.filter((i) => i.result === 'pass').length
-  const failed = inspections.filter((i) => i.result === 'fail').length
-  const decided = passed + failed
-
-  return {
-    awaitingInspection: inspections.filter((i) => i.result === 'pending').length,
-    passed,
-    failed,
-    reworkOpen: inspections.filter((i) => i.result === 'rework').length,
-    passRate: decided > 0 ? Number(((passed / decided) * 100).toFixed(1)) : 0,
-  }
-}
 
 export async function getInventoryHealth(): Promise<InventoryHealthRow[]> {
   return []

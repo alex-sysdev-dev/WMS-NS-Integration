@@ -13,6 +13,22 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    // A leading underscore means "deliberately unused, and the signature has to
+    // stay". Query modules awaiting their NetSuite source keep their parameters
+    // so callers do not change when the body is filled in, and dropping the
+    // parameter instead would be a type error at every call site.
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
+    },
+  },
 ]);
 
 export default eslintConfig;

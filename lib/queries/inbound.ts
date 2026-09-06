@@ -1,81 +1,30 @@
-import { serverSupabase } from '@/lib/supabase-server'
-import { InboundItem, Shipment, ShipmentStatus } from '@/types/inbound'
-import { logQueryError } from '@/lib/queries/query-log'
+import { InboundItem, Shipment } from '@/types/inbound'
 
-type RawInboundItem = {
-  id: string
-  shipment_id: string
-  product_id: string
-  expected_qty: number | null
-  received_qty: number | null
-}
+/**
+ * Inbound has no source yet.
+ *
+ * These reads used to hit the `inbound_shipments` and `inbound_items` tables
+ * carried over from the scaffolding this project was started from. That store
+ * is gone and NetSuite is the only datastore, so the honest state is empty
+ * until inbound is wired to NetSuite.
+ *
+ * Inbound is not a straight port. LED Connection records receipts against the
+ * Vendor Bill, not the Item Receipt, because zero Item Receipts exist
+ * account-wide and the Vendor Bill is what carries the Inventory Detail
+ * subrecord. Whatever replaces this reads vendor bills, and every line it
+ * returns has to carry item, lot, and bin, since inventory is lot-tracked and
+ * never serialized.
+ *
+ * Callers render an empty state with a visible notice. An unconnected page and
+ * a page with genuinely nothing on it must not look the same.
+ */
 
-type RawShipmentMeta = {
-  id: string
-  supplier: string | null
-  eta: string | null
-  status: string | null
-}
-
-function normalizeShipmentStatus(value: string | null): ShipmentStatus | 'unknown' {
-  const normalized = value?.trim().toLowerCase()
-  if (normalized === 'scheduled' || normalized === 'arrived' || normalized === 'received') {
-    return normalized
-  }
-
-  return 'unknown'
-}
+export const INBOUND_SOURCE_READY = false
 
 export async function getInboundShipments(): Promise<Shipment[]> {
-  const { data, error } = await serverSupabase
-    .from('inbound_shipments')
-    .select('*')
-    .order('eta', { ascending: true })
-
-  if (error) {
-    logQueryError('Inbound fetch error:', error)
-    // Degrade to an empty list rather than rethrowing. Every other query in this
-    // layer returns empty on failure; throwing here made an unreachable database
-    // a 500 on /inbound instead of a page with no rows.
-    return []
-  }
-
-  return (data as Shipment[] | null) ?? []
+  return []
 }
 
 export async function getInboundItems(): Promise<InboundItem[]> {
-  const [{ data: itemRows, error: itemError }, { data: shipmentRows, error: shipmentError }] = await Promise.all([
-    serverSupabase.from('inbound_items').select('id, shipment_id, product_id, expected_qty, received_qty'),
-    serverSupabase.from('inbound_shipments').select('id, supplier, eta, status'),
-  ])
-
-  // Degrade to an empty list rather than rethrowing, matching the rest of this
-  // layer. An unreachable database should render an empty page, not a 500.
-  if (itemError) {
-    logQueryError('Inbound items fetch error:', itemError)
-    return []
-  }
-
-  if (shipmentError) {
-    logQueryError('Inbound shipment metadata fetch error:', shipmentError)
-    return []
-  }
-
-  const shipmentsById = new Map<string, RawShipmentMeta>(
-    ((shipmentRows as RawShipmentMeta[] | null) ?? []).map((shipment) => [shipment.id, shipment])
-  )
-
-  return ((itemRows as RawInboundItem[] | null) ?? []).map((item) => {
-    const shipment = shipmentsById.get(item.shipment_id)
-    return {
-      id: item.id,
-      shipment_id: item.shipment_id,
-      product_id: item.product_id,
-      expected_qty: item.expected_qty ?? 0,
-      received_qty: item.received_qty ?? 0,
-      supplier: shipment?.supplier ?? 'Unknown supplier',
-      eta: shipment?.eta ?? null,
-      status: normalizeShipmentStatus(shipment?.status ?? null),
-    }
-  })
+  return []
 }
