@@ -1,9 +1,5 @@
-import { serverSupabase } from '@/lib/supabase-server'
-import { getInboundItems, getInboundShipments } from '@/lib/queries/inbound'
-import { getQaInspections } from '@/lib/queries/qa'
 import type {
   InboundQaQueueItem,
-  InboundQueueState,
   InventoryItem,
   InventoryRisk,
   OutboundFloorData,
@@ -12,8 +8,6 @@ import type {
   PickTask,
   PickTaskStatus,
 } from '@/types/outbound'
-import type { QaInspection, QaResult } from '@/types/qa'
-import { logQueryError } from '@/lib/queries/query-log'
 
 type RawRow = Record<string, unknown>
 
@@ -24,16 +18,6 @@ const STATUS_SORT_ORDER: Record<PickTaskStatus, number> = {
   packed: 3,
   unknown: 4,
   completed: 5,
-}
-
-const QUEUE_STATE_ORDER: Record<InboundQueueState, number> = {
-  blocked: 0,
-  qa_pending: 1,
-  arrived: 2,
-  received: 3,
-  scheduled: 4,
-  released: 5,
-  unknown: 6,
 }
 
 function pickString(row: RawRow, keys: string[]): string | null {
@@ -314,72 +298,17 @@ function normalizeInventoryItem(row: RawRow, index: number): InventoryItem {
   }
 }
 
-function queueStateFrom(shipmentStatus: string, qaResult: QaResult): InboundQueueState {
-  if (qaResult === 'fail') {
-    return 'blocked'
-  }
-
-  if (qaResult === 'pass') {
-    return 'released'
-  }
-
-  if (qaResult === 'pending') {
-    return 'qa_pending'
-  }
-
-  if (shipmentStatus === 'scheduled') {
-    return 'scheduled'
-  }
-
-  if (shipmentStatus === 'arrived') {
-    return 'arrived'
-  }
-
-  if (shipmentStatus === 'received') {
-    return 'qa_pending'
-  }
-
-  return 'unknown'
-}
-
-async function getTableRows(table: string): Promise<RawRow[]> {
-  const { data, error } = await serverSupabase.from(table).select('*')
-  if (error) {
-    logQueryError(`Supabase fetch error for ${table}:`, error)
-    return []
-  }
-
-  return (data as RawRow[] | null) ?? []
-}
-
-function latestQaByKey(inspections: QaInspection[]): {
-  byShipmentProduct: Map<string, QaInspection>
-  byShipment: Map<string, QaInspection>
-} {
-  const byShipmentProduct = new Map<string, QaInspection>()
-  const byShipment = new Map<string, QaInspection>()
-
-  for (const inspection of inspections) {
-    const shipmentId = inspection.shipmentId ?? ''
-    const productId = inspection.productId ?? ''
-
-    if (!shipmentId) {
-      continue
-    }
-
-    const compositeKey = `${shipmentId}::${productId}`
-    const currentByComposite = byShipmentProduct.get(compositeKey)
-    if (!currentByComposite || toTime(inspection.inspectedAt) > toTime(currentByComposite.inspectedAt)) {
-      byShipmentProduct.set(compositeKey, inspection)
-    }
-
-    const currentByShipment = byShipment.get(shipmentId)
-    if (!currentByShipment || toTime(inspection.inspectedAt) > toTime(currentByShipment.inspectedAt)) {
-      byShipment.set(shipmentId, inspection)
-    }
-  }
-
-  return { byShipmentProduct, byShipment }
+/**
+ * No source. `pick_tasks`, `pick_pack_stations`, and `inventory` were scaffolding
+ * tables and Supabase is gone, so every caller degrades to an empty list until
+ * outbound reads NetSuite.
+ *
+ * Inventory in particular cannot be a straight port: it is lot-tracked and
+ * never serialized, so a replacement row carries item, lot, bin, and qty rather
+ * than the flat sku-and-location shape normalized below.
+ */
+async function getTableRows(_table: string): Promise<RawRow[]> {
+  return []
 }
 
 export async function getPickTasks(): Promise<PickTask[]> {
@@ -432,53 +361,16 @@ export async function getInventoryView(): Promise<InventoryItem[]> {
     })
 }
 
+/**
+ * NOT YET CONNECTED.
+ *
+ * This queue was assembled from Supabase shipment, item, and qa_inspections
+ * rows. Fabrication quality is being rebuilt from zero against NetSuite and no
+ * quality record is read from Supabase any more, so this returns nothing rather
+ * than a stale or invented queue.
+ */
 export async function getInboundQaQueue(): Promise<InboundQaQueueItem[]> {
-  try {
-    const [shipments, items, inspections] = await Promise.all([
-      getInboundShipments(),
-      getInboundItems(),
-      getQaInspections(),
-    ])
-
-    const shipmentById = new Map(shipments.map((shipment) => [shipment.id, shipment]))
-    const qaMaps = latestQaByKey(inspections)
-
-    const queue = items.map((item, index) => {
-      const shipment = shipmentById.get(item.shipment_id)
-      const compositeKey = `${item.shipment_id}::${item.product_id}`
-      const inspection = qaMaps.byShipmentProduct.get(compositeKey) ?? qaMaps.byShipment.get(item.shipment_id)
-      const qaResult = inspection?.result ?? 'pending'
-      const shipmentStatus = item.status ?? shipment?.status ?? 'unknown'
-      const queueState = queueStateFrom(shipmentStatus, qaResult)
-
-      return {
-        id: `${item.shipment_id}-${item.product_id}-${index + 1}`,
-        shipmentId: item.shipment_id,
-        supplier: item.supplier,
-        eta: item.eta ?? shipment?.eta ?? null,
-        productId: item.product_id,
-        expectedQty: item.expected_qty,
-        receivedQty: item.received_qty,
-        varianceQty: item.received_qty - item.expected_qty,
-        shipmentStatus,
-        qaResult,
-        queueState,
-        inspector: inspection?.inspector ?? null,
-        inspectedAt: inspection?.inspectedAt ?? null,
-      } satisfies InboundQaQueueItem
-    })
-
-    return queue.sort((a, b) => {
-      if (QUEUE_STATE_ORDER[a.queueState] !== QUEUE_STATE_ORDER[b.queueState]) {
-        return QUEUE_STATE_ORDER[a.queueState] - QUEUE_STATE_ORDER[b.queueState]
-      }
-
-      return toTime(a.eta) - toTime(b.eta)
-    })
-  } catch (error) {
-    logQueryError('Inbound/QA queue build error:', error)
-    return []
-  }
+  return []
 }
 
 function resolveTaskStationAssignments(tasks: PickTask[], stations: PackStation[]): PickTask[] {

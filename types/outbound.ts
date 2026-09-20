@@ -1,4 +1,11 @@
-import type { QaResult } from '@/types/qa'
+/**
+ * Result of a receiving inspection on an inbound line.
+ *
+ * This belongs to Receiving, not to fabrication quality. Fabrication quality
+ * was rebuilt from zero against NetSuite and its shapes live in
+ * `types/fab-team.ts`; nothing here reads from that model or from Supabase.
+ */
+export type QaResult = 'pass' | 'fail' | 'pending' | 'waived'
 
 export type PickTaskStatus = 'queued' | 'picking' | 'packed' | 'blocked' | 'completed' | 'unknown'
 

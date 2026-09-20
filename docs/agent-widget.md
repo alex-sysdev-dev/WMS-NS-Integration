@@ -39,7 +39,7 @@ These mirror the existing endpoints so behavior is consistent with the MCP route
 | `get_kpi_trend` | `getExecutiveKpiHistoryHourly` / `getExecutiveKpiHistoryDaily` |
 | `get_max_lines` | `getExecutiveKpiMaxLines(48)` |
 | `get_cpt_risk` | `getExecutiveCptRiskOrders(limit)` filtered by bucket |
-| `get_order_status` | `supabase.from('order_cpt_risk').eq(...)` |
+| `get_order_status` | none, returns `source_unavailable` (503) |
 
 The system prompt enforces:
 - Always call a tool — never invent values.
@@ -90,7 +90,7 @@ Errors return `{ error, message, ... }` with appropriate status codes
   MCP route, and avoids needing a server-side base URL.
 - **No new dependency**: smaller blast radius, no `package.json` change.
 - **Single file mounted in layout**: one place to remove the agent if needed.
-- **Read-only by construction**: no tool exists that can write to Supabase, even
+- **Read-only by construction**: no tool exists that can write to any store, even
   if the model tried.
 
 ## Known limitations / next steps

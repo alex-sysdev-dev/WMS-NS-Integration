@@ -1,8 +1,8 @@
 /**
  * Warehouse KPIs for LED Connection.
  *
- * These replace the fulfillment-center metrics the donor UI shipped with
- * (throughput per hour, CPT risk, yard occupancy, trailer dwell). None of those
+ * These replace generic fulfillment-center metrics (throughput per hour, CPT
+ * risk, yard occupancy, trailer dwell). None of those
  * describe this operation: there is no yard, no trailers, no parcel cut-off
  * times, and material is bought per project rather than stocked and picked
  * against a forecast.

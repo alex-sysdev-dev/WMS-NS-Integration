@@ -1,36 +1,15 @@
-import { serverSupabase } from '@/lib/supabase-server'
 import { getInboundItems } from '@/lib/queries/inbound'
 import { getInboundQaQueue, getInventoryView } from '@/lib/queries/outbound'
 
-type TaskStatusRow = {
-  status?: string | null
-}
-
-function isOpenTaskStatus(value: string | null | undefined): boolean {
-  const normalized = value?.trim().toLowerCase()
-  if (!normalized) {
-    return true
-  }
-
-  return !(
-    normalized.includes('complete') ||
-    normalized.includes('closed') ||
-    normalized.includes('done') ||
-    normalized.includes('cancel')
-  )
-}
-
-async function getFirstOpenTaskCount(tableNames: string[]): Promise<number | null> {
-  for (const tableName of tableNames) {
-    const result = await serverSupabase.from(tableName).select('status')
-    if (result.error) {
-      continue
-    }
-
-    const rows = (result.data as TaskStatusRow[] | null) ?? []
-    return rows.filter((row) => isOpenTaskStatus(row.status)).length
-  }
-
+/**
+ * No source. This probed a list of candidate scaffolding task tables and
+ * returned the count from the first one that answered. Supabase is gone, so it
+ * returns null, which callers already treat as "unknown" rather than zero.
+ *
+ * Null matters here. Zero open putaway tasks and no way to count them are
+ * different facts, and only one of them should read as a clear board.
+ */
+async function getFirstOpenTaskCount(_tableNames: string[]): Promise<number | null> {
   return null
 }
 

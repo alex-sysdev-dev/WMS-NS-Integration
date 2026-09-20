@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 import KpiTile from '@/components/kpi/KpiTile'
 import DataTable, { type Column } from '@/components/tables/DataTable'
 import DataSourceNotice from '@/components/common/DataSourceNotice'
@@ -48,6 +50,17 @@ export default async function FabricationPage() {
           Build requests by project, the raw components each one consumes, and what is short.
           Fabrication is tracked here rather than in NetSuite, which has no work order or assembly
           build records.
+        </p>
+        <p className="max-w-3xl text-sm text-zinc-500">
+          Timing a build does not wait on this queue.{' '}
+          <Link href="/fabrication/floor" className="font-medium text-orange-400 hover:text-orange-300">
+            Fab Floor
+          </Link>{' '}
+          runs the clock against a project number today, and{' '}
+          <Link href="/fabrication/tact" className="font-medium text-orange-400 hover:text-orange-300">
+            Tact Time
+          </Link>{' '}
+          is the log leadership reads.
         </p>
       </header>
 

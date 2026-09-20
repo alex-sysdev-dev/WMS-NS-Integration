@@ -1,87 +1,27 @@
-import { serverSupabase } from '@/lib/supabase-server'
-import type { FacilityLayout, FacilityLayoutData, FacilityLayoutItem } from '@/types/layout'
-import { logQueryError } from '@/lib/queries/query-log'
+import type { FacilityLayoutData } from '@/types/layout'
 
-function toNumber(value: unknown, fallback = 0): number {
-  if (typeof value === 'number' && Number.isFinite(value)) {
-    return value
-  }
+/**
+ * Floor layouts have no source yet.
+ *
+ * These read the `facility_layouts` and `facility_layout_items` tables from
+ * the scaffolding this project was started from. That store is gone and
+ * NetSuite is the only datastore, so this returns an empty layout until the
+ * floor plan has a home.
+ *
+ * Layout geometry is the one thing here with no natural NetSuite record. Bins
+ * are real and live in NetSuite (FAB1 through FAB9, and the rest), but where a
+ * bin sits in x/y space on a floor plan is presentation, not inventory. That
+ * needs either a NetSuite custom record or an argued exception, and it is the
+ * open question to settle before anything renders a floor plan again.
+ *
+ * Callers render an empty state with a visible notice rather than a blank grid
+ * that reads as a facility with nothing in it.
+ */
 
-  if (typeof value === 'string') {
-    const parsed = Number(value)
-    if (Number.isFinite(parsed)) {
-      return parsed
-    }
-  }
+export const LAYOUT_SOURCE_READY = false
 
-  return fallback
-}
+const EMPTY_LAYOUT: FacilityLayoutData = { layout: null, items: [] }
 
-function normalizeLayout(row: Record<string, unknown> | null): FacilityLayout | null {
-  if (!row) {
-    return null
-  }
-
-  return {
-    id: String(row.id ?? ''),
-    code: String(row.code ?? ''),
-    name: String(row.name ?? 'Unnamed Layout'),
-    facility_area: typeof row.facility_area === 'string' ? row.facility_area : null,
-    width_units: Math.max(1, toNumber(row.width_units, 100)),
-    height_units: Math.max(1, toNumber(row.height_units, 100)),
-  }
-}
-
-function normalizeLayoutItem(row: Record<string, unknown>): FacilityLayoutItem {
-  return {
-    id: String(row.id ?? ''),
-    layout_id: String(row.layout_id ?? ''),
-    item_code: String(row.item_code ?? ''),
-    item_label: String(row.item_label ?? 'Layout Item'),
-    item_type: String(row.item_type ?? 'zone'),
-    x: toNumber(row.x),
-    y: toNumber(row.y),
-    w: Math.max(1, toNumber(row.w, 1)),
-    h: Math.max(1, toNumber(row.h, 1)),
-    rotation_deg: row.rotation_deg === null || row.rotation_deg === undefined ? null : toNumber(row.rotation_deg),
-    zone: typeof row.zone === 'string' ? row.zone : null,
-    shape: typeof row.shape === 'string' ? row.shape : null,
-    color: typeof row.color === 'string' ? row.color : null,
-    sort_order: toNumber(row.sort_order, 0),
-    metadata: row.metadata && typeof row.metadata === 'object' ? (row.metadata as Record<string, unknown>) : null,
-  }
-}
-
-export async function getFacilityLayoutData(code: string): Promise<FacilityLayoutData> {
-  const layoutResult = await serverSupabase
-    .from('facility_layouts')
-    .select('id, code, name, facility_area, width_units, height_units')
-    .eq('code', code)
-    .maybeSingle()
-
-  if (layoutResult.error) {
-    logQueryError(`Facility layout fetch error for ${code}:`, layoutResult.error)
-    return { layout: null, items: [] }
-  }
-
-  const layout = normalizeLayout(layoutResult.data as Record<string, unknown> | null)
-  if (!layout) {
-    return { layout: null, items: [] }
-  }
-
-  const itemsResult = await serverSupabase
-    .from('facility_layout_items')
-    .select('id, layout_id, item_code, item_label, item_type, x, y, w, h, rotation_deg, zone, shape, color, sort_order, metadata')
-    .eq('layout_id', layout.id)
-    .order('sort_order', { ascending: true })
-
-  if (itemsResult.error) {
-    logQueryError(`Facility layout items fetch error for ${code}:`, itemsResult.error)
-    return { layout, items: [] }
-  }
-
-  return {
-    layout,
-    items: ((itemsResult.data as Record<string, unknown>[] | null) ?? []).map(normalizeLayoutItem),
-  }
+export async function getFacilityLayoutData(_code: string): Promise<FacilityLayoutData> {
+  return EMPTY_LAYOUT
 }

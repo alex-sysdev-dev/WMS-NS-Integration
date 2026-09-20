@@ -5,7 +5,7 @@ import { EMPTY_WAREHOUSE_KPIS, type ProjectAttentionRow, type WarehouseKpiSnapsh
  *
  * Not yet connected. These return empty results on purpose rather than sample
  * numbers, so an unwired dashboard is visibly distinguishable from a working
- * one. Fabricated demo data is what made the donor project misleading.
+ * one. Fabricated demo data is what makes a dashboard misleading.
  *
  * When wiring these to NetSuite, the queries are:
  *

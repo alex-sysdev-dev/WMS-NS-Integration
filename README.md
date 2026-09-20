@@ -34,24 +34,55 @@ typical WMS assumes:
 
 | Route | Purpose | Status |
 |---|---|---|
-| `/dashboard` | Operational overview | Supabase-backed (legacy) |
-| `/inbound`, `/inbound/shipments` | Receiving against projects | Supabase-backed (legacy) |
-| `/fabrication` | Build queue and component staging | Structure only — not connected |
-| `/outbound`, `/outbound/floor` | Pick, pack, ship | Supabase-backed (legacy) |
-| `/qc/fabrication` | Inspection of finished builds | Structure only — not connected |
-| `/qc/warehouse` | Bin/lot inventory health, cycle counts | Structure only — not connected |
-| `/associates` | Roster (placeholder data) | Supabase-backed (legacy) |
+| `/dashboard` | Operational overview | Structure only, not connected |
+| `/inbound`, `/inbound/shipments` | Receiving against projects | Structure only, not connected |
+| `/fabrication` | Build queue and component staging | Structure only, not connected |
+| `/fabrication/floor`, `/fabrication/tact` | Bench console and tact time | Runs real, project lookup not connected |
+| `/outbound`, `/outbound/floor` | Pick, pack, ship | Structure only, not connected |
+| `/qc/fabrication` | Inspection of finished builds | Structure only, not connected |
+| `/qc/warehouse` | Bin/lot inventory health, cycle counts | Structure only, not connected |
+| `/fab-team`, `/fab-team/[memberId]` | Fabrication roster, throughput, quality | Roster real, metrics not connected |
 
-Pages marked *not connected* render real structure with honest empty states and a
-visible notice. No sample data is fabricated anywhere — an empty page and a
-working page must never look the same.
+Nothing above reads a datastore yet. Each page renders real structure with an
+honest empty state and a visible notice.
+
+No sample data is fabricated anywhere. An empty page and a working page must
+never look the same, which is also why the project lookup distinguishes "could
+not reach NetSuite" from "no such project" rather than collapsing both into a
+blank result.
+
+`/associates` was removed. `/fab-team` replaces it, describing the four real
+people on the fabrication team rather than placeholder roster rows.
 
 ## Stack
 
 TypeScript throughout. Next.js 16 (App Router, React Server Components),
-React 19, Tailwind CSS 4. Charts and KPI tiles are hand-rolled — no chart library.
-Supabase (hosted Postgres) is the current backend; NetSuite integration is not yet
-built.
+React 19, Tailwind CSS 4. Charts and KPI tiles are hand-rolled, no chart library.
+Auth.js v5 for sign-in. Four runtime dependencies in total.
+
+**There is no datastore.** NetSuite is the only one this project will have, and
+that integration is not built yet, so query modules return honest empties behind
+a `*_SOURCE_READY` flag and carry a note on what their replacement has to do.
+Do not introduce a second datastore to fill the gap.
+
+Fabrication runs are the exception: they are real, and live in an interim store
+until fabrication is integrated.
+
+## Authentication
+
+Staff sign in with a Microsoft work account through Entra. Auth.js is wired but
+**not configured** until an M365 admin creates the app registration; the login
+page says so rather than offering a button that fails. Setup is in
+[`docs/entra-sign-in-setup.md`](docs/entra-sign-in-setup.md).
+
+Two rules hold this together:
+
+- `lib/auth/current-user.ts` is the only place the app asks who is signed in.
+  Nothing outside `lib/auth/` imports a provider.
+- Entra covers staff only. Fabrication associates cannot use it, because temps
+  do not get Microsoft accounts and the fab laptops are shared, so a session
+  login would attribute a week of timer activity to whoever signed in first.
+  That surface is authorized by badge scan per action and is not built yet.
 
 ## Local development
 
@@ -62,17 +93,20 @@ npm install
 npm run dev
 ```
 
-Copy `.env.example` to `.env.local` and fill it in:
+Create `.env.local` in the repo root:
 
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` — browser client
-- `SUPABASE_SERVICE_ROLE_KEY` — **server only.** Never prefix this with
-  `NEXT_PUBLIC_`; Next.js inlines those into the browser bundle, and this key
-  bypasses row-level security entirely.
 - `LOCAL_DEV_PLATFORM_ACCESS=true` — browse protected pages without signing in.
-  Ignored in production.
+  Hard-gated on `NODE_ENV`, so it cannot be active in a production build. This
+  is the only way in until Entra is configured.
+- `AUTH_MICROSOFT_ENTRA_ID_ID`, `AUTH_MICROSOFT_ENTRA_ID_SECRET`,
+  `AUTH_MICROSOFT_ENTRA_ID_ISSUER`, `AUTH_SECRET` — Microsoft sign-in. See
+  [`docs/entra-sign-in-setup.md`](docs/entra-sign-in-setup.md).
+- `ANTHROPIC_API_KEY` — **server only.** Never prefix a secret with
+  `NEXT_PUBLIC_`; Next.js inlines those into the browser bundle.
 
-If the database is unreachable, pages render empty with a single console warning
-rather than crashing.
+The local dev user is stamped `isLocalDev: true` and named "Local Dev
+(unauthenticated)", so anything recording attributable activity can tell it
+apart from a real person on the floor.
 
 ### Verification
 
@@ -87,8 +121,14 @@ node ./node_modules/eslint/bin/eslint.js app components lib types
 
 ## NetSuite integration notes
 
-Read-only access first. **Never write to a live NetSuite record** — writes must be
-proven against a sandbox account.
+**No writes to NetSuite. None.** Not production, not sandbox. Reading production
+for discovery is expected and encouraged; every write is out of scope until Alex
+explicitly lifts that rule. `ns_runCustomSuiteQL` is `SELECT` only.
+
+The app has no NetSuite connection of its own yet. The MCP connector used for
+discovery is a Claude tool, not an app integration, so the Next.js server cannot
+query NetSuite until it has token-based auth and a SuiteQL or RESTlet endpoint.
+That is a credentials gap, not a guardrail one.
 
 Two facts drive the receiving design:
 

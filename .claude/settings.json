@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "mcp__claude_ai_NetSuite__ns_runCustomSuiteQL",
+      "mcp__NetSuite__ns_runCustomSuiteQL",
+      "mcp__claude_ai_NetSuite__ns_getSuiteQLMetadata",
+      "mcp__NetSuite__ns_getSuiteQLMetadata",
+      "mcp__claude_ai_NetSuite__ns_listSavedSearches",
+      "mcp__NetSuite__ns_listSavedSearches",
+      "mcp__claude_ai_NetSuite__ns_runSavedSearch",
+      "mcp__NetSuite__ns_runSavedSearch",
+      "mcp__claude_ai_monday_com__get_board_items_page",
+      "mcp__claude_ai_monday_com__get_updates",
+      "mcp__claude_ai_monday_com__get_board_info",
+      "mcp__claude_ai_monday_com__search",
+      "mcp__claude_ai_Notion__notion-fetch",
+      "mcp__claude_ai_Notion__notion-search",
+      "mcp__claude_ai_Microsoft_365__outlook_email_search",
+      "mcp__claude_ai_Microsoft_365__read_resource",
+      "mcp__claude_ai_Slack__slack_search_public_and_private",
+      "Bash(node ./node_modules/typescript/bin/tsc --noEmit)",
+      "Bash(node ./node_modules/eslint/bin/eslint.js app components lib types)",
+      "Bash(node ./node_modules/next/dist/bin/next build)",
+      "Bash(export:*)",
+      "PowerShell(Get-CimInstance:*)",
+      "PowerShell(Set-Location:*)"
+    ],
+    "deny": [
+      "mcp__NetSuite__ns_createRecord",
+      "mcp__NetSuite__ns_updateRecord",
+      "mcp__claude_ai_NetSuite__ns_createRecord",
+      "mcp__claude_ai_NetSuite__ns_updateRecord",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(./**/*.pem)",
+      "Edit(./.env)",
+      "Edit(./.env.*)",
+      "Write(./.env)",
+      "Write(./.env.*)",
+      "Write(./supabase/migrations/**)",
+      "Edit(./supabase/migrations/**)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git filter-branch:*)",
+      "Bash(supabase db push:*)",
+      "Bash(npx supabase db push:*)",
+      "Bash(rm -rf /:*)"
+    ],
+    "ask": [
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Write(./supabase/**)",
+      "Edit(./package.json)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "powershell -NoProfile -ExecutionPolicy Bypass -File \"C:\\Users\\AlexAguilar\\WMS_Build\\.claude\\hooks\\guardrails.ps1\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
